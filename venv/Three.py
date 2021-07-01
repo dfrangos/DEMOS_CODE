@@ -164,6 +164,8 @@ ax1.legend(["Body 1", "Body 2","Body 3", "Body 4", "Body 5"])
 print(State_Store[:,3:,:].max())
 plt.show()
 #9000, 900, 5, 5e22, -3.84e7...   -100..... Soft=1e2
+A=4
+print(A)
 
 
 
