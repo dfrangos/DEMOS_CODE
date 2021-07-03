@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import integrate
 import matplotlib.pyplot as plt
-
 from Coordinate_Transform import Kep_Peri
 from Coordinate_Transform import IJKPQW
 from Coordinate_Transform import Peri_Inert
@@ -36,14 +35,23 @@ def set_axes_equal(ax):
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
-#This is declaring what your state vector is in terms of keplarian elements as.
+#This is declaring what your state vector is in terms of keplarian elements.
 a,e,i,ran,w,theta,mu = 6100e3+6378e3,.001,45*(np.pi/180),35*(np.pi/180),30*(np.pi/180),180*(np.pi/180),3.986004415e14
+if e == 0 and i == 0:
+    w = 0
+    ran = 0
+# This condition is for when you're circular and inclined.
+if e == 0 and i > 0:
+    w = 0
+# This condition is for when you're elliptical and equatorial.
+if e > 0 and i == 0:
+    ran = 0
 #Defining your start time (Date).
 Epoch=[2001,4,2,12,10,10]
 MD, JD=Julian_Date(Epoch)
 
-print("Here are your Keplerian Orbital Elements: ","\nSemimajor Axis:",a,"\nEccentricity:",e,"\nInclination: %.2g"%i,"\nRight Accension of Ascending Node:",ran,
-      "\nArgument of Perigee:",w,"\nTrue Anomaly:",theta)
+#print("Here are your Keplerian Orbital Elements: ","\nSemimajor Axis:",a,"\nEccentricity:",e,"\nInclination: %.2g"%i,"\nRight Accension of Ascending Node:",ran,
+      #"\nArgument of Perigee:",w,"\nTrue Anomaly:",theta)
 #Invoking the kep peri function to output the state vector in terms
 #of a position and velocity vector in perifocal coordinates.
 r,v=Kep_Peri(a,e,i,ran,w,theta,mu)

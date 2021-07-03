@@ -11,17 +11,6 @@ sqrt=np.sqrt
 
 
 def Kep_Peri(a,e,i,ran,w,theta,mu):
-    # This condition is for when your orbit is circular & equatorial.
-    if e==0 and i==0:
-        w=0
-        ran=0
-    # This condition is for when you're circular and inclined.
-    if e == 0 and i > 0:
-        w = 0
-    # This condition is for when you're elliptical and equatorial.
-    if e > 0 and i == 0:
-        ran = 0
-    #__________________________________________________________________
     #Defining Semilatus Rectum
     p = a*(1-(e**2))
 
