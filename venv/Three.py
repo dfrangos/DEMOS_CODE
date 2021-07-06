@@ -7,12 +7,15 @@ import scipy
 import random as rand
 import mpl_toolkits.mplot3d.axes3d as p3
 import networkx as nx
+import PySimpleGUI as sg
 from N_Body_Functions import *
 from matplotlib import animation, rc
 from IPython.display import HTML
 from matplotlib.animation import FuncAnimation, PillowWriter
 from mpl_toolkits.mplot3d import Axes3D
+from future.moves import tkinter as Tkinter
 np.random.seed(1)
+Save_to_File="Off"
 def set_axes_equal(ax):
     '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
@@ -42,21 +45,74 @@ def set_axes_equal(ax):
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 ################_______________________________________########################
 
-#The number of bodies in the system
-t=2000 #How many iterations
-DT=3600 # Your delta T jumps
+#Defining my layout condition for the window creation. This is where you setup word prompts and buttons:
+sg.theme('DarkAmber')
+Format= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Cancel")]]
+#Creates the window with the layout condition.
+Screen=sg.Window("Demokritos' Game of Gravitation",Format,margins=(150,70))
+#Creating an event loop
 
-Scenario_Type=input("Which Scenario Would you like to Run? R: Random, S: Solar System\n")
-if Scenario_Type=="R":
-    N=7
-    Mass=5e22
-    Pos_Bound=3.84e7
-    Vel_Bound=300
+while True:
+    event,values=Screen.read()
+    #This will end the program if the user closes the window of presses the move forward button
+    if event == "Random":
+        Format1 =  [ [sg.Text('Would you like to Customize or Run the Default?')],
+                    [sg.Button("Customize")], [sg.Button("Default")], [sg.Button("Cancel")]]
+        Screen1 = sg.Window("Demokritos' Game of Gravitation", Format1, margins=(150, 70))
+        event, values = Screen1.read()
+        if event == "Default":
+            t = 2000  # How many iterations
+            DT = 300  # Your delta T jumps
+            N = 6
+            Mass = 5e28
+            Pos_Bound = 3.84e7
+            Vel_Bound = 300
+            # Defining my storage area for my position values
+            State, Mass, Soft = Create_Random(N, Mass, Pos_Bound, Vel_Bound)
+            break
+        elif event == "Customize":
+            Format2 =  [ [sg.Text('Setup Your Parameters:')],
+                        [sg.Text('How Many Bodies Would You Like to Simulate?'), sg.Input(key='-INPUT-')],
+                        [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'), sg.InputText(key='-INPUT-')],
+                        [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'), sg.InputText(key='-INPUT-')],
+                        [sg.Text('What are the Masses of the Bodies? (kg)'), sg.InputText(key='-INPUT-')],
+                        [sg.Text('How Many Iterations Would You Like to Execute?'), sg.InputText(key='-INPUT-')],
+                        [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'), sg.InputText(key='-INPUT-')],
+                        [sg.Button("Ok")], [sg.Button("Cancel")]]
+            Screen2 = sg.Window("Demokritos' Game of Gravitation", Format, margins=(150, 70))
+            event, values = Screen2.read()
+            break
+        elif event == "Cancel" or event == sg.WIN_CLOSED:
+            break
+        break
+    elif event == "Solar System":
+        t = 2000  # How many iterations
+        DT = 36000  # Your delta T jumps
+        N = 6
+        State, Mass, Soft = Create_Solar_System()
+        break
+    elif event=="Cancel" or event == sg.WIN_CLOSED:
+
+        break
+
+#Window=sg.Window(title="Scenario Boot Up",layout=[[]],margins=(300,150)).read()
+
+#Scenario_Type=input("Which Scenario Would you like to Run? R: Random, S: Solar System\n")
+#if Scenario_Type=="R":
+    #t = 2000  # How many iterations
+    #DT = 300  # Your delta T jumps
+    #N=6
+    #Mass=5e28
+    #Pos_Bound=3.84e7
+    #Vel_Bound=300
     #Defining my storage area for my position values
-    State, Mass, Soft = Create_Random(N,Mass,Pos_Bound,Vel_Bound)
-elif Scenario_Type=="S":
-    State, Mass, Soft = Create_Solar_System()
-else: print("Not a Valid Entry!")
+    #State, Mass, Soft = Create_Random(N,Mass,Pos_Bound,Vel_Bound)
+#elif Scenario_Type=="S":
+   # t = 2000  # How many iterations
+   # DT = 36000  # Your delta T jumps
+ #   N = 6
+   # State, Mass, Soft = Create_Solar_System()
+#else: print("Not a Valid Entry!")
 
 State_Store=np.zeros((N,6,t))
 Accel = Get_Accel(N,State,Mass,Soft)
@@ -64,14 +120,13 @@ for k in range(t):
     State = Update_State(N,State,Accel,DT,Mass,Soft)
     State_Store[:,:,k]=State[:,0:]
 
-
 #Saving the State Store Information to a File
-write_to_file = True
-filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
-if write_to_file:
-    with open(filename, 'wb') as f:
-        np.save(f, State_Store)
-
+    while Save_to_File=="On":
+        write_to_file = True
+        filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+        if write_to_file:
+            with open(filename, 'wb') as f:
+                np.save(f, State_Store)
 
 Initial_Energy=Total_Energy(N, State_Store, Mass, 0)
 Final_Energy=Total_Energy(N, State_Store, Mass, -1)

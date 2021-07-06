@@ -23,8 +23,11 @@ def Create_Random(N,Mass,Pos_Bound,Vel_Bound):
 def Create_Solar_System():
     # Defining Softening factor
     soft = 6378e5/AU
+    #state=np.array([[0,0,0,0,0,0],[(.41*AU),0,0,0,47.9e3,0],[.74*AU,0,0,50,35e3,-150],[1.0*AU,.02*AU,.01*AU,100,29.8e3,-100]])/AU
+    #mass=np.array([[1.989e30,0.33e24,1.84767309e28,5.97e24]])/M_sun
     state=np.array([[0,0,0,0,0,0],[(.41*AU),0,0,0,47.9e3,0],[.74*AU,0,0,0,35e3,0],[1.0*AU,0,0,0,29.8e3,0],[(1.0*AU)+404e6,0,0,0,29.8e3+np.sqrt(3.986e14/404e6),0],[1.6*AU,0,0,0,24.1e3,0]])/AU
     mass=np.array([[1.989e30,0.33e24,4.87e24,5.97e24,7.34767309e22,0.642e24]])/M_sun
+
     return state, mass, soft
 
 #__________________________________________________________

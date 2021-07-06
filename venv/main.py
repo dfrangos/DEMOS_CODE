@@ -67,13 +67,13 @@ print("Inertial Position Vector:",r_ijk, "meters","\nInertial Velocity Vector:",
 #Setting up the integrator.
 
 t0=0
-tf=60000
-data_points=2000
+tf=6000
+data_points=1000
 t=np.linspace(t0, tf, data_points)
 init_cond=r_ijk,v_ijk
 init_cond=np.array([init_cond[0][0],init_cond[0][1],init_cond[0][2],init_cond[1][0],init_cond[1][1],init_cond[1][2]])
-r= integrate.ode(N_Body_J2_Drag).set_integrator("dop853")
-r.set_initial_value(init_cond,t0).set_f_params(JD)
+r= integrate.ode(Two_Body()).set_integrator("dop853")
+r.set_initial_value(init_cond,t0).set_f_params()
 y=np.zeros((len(t),len(init_cond)))
 
 y[0,:]=init_cond
