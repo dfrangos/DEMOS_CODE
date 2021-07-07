@@ -47,20 +47,19 @@ def set_axes_equal(ax):
 
 #Defining my layout condition for the window creation. This is where you setup word prompts and buttons:
 sg.theme('DarkAmber')
-Format= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Cancel")]]
+Format1= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Cancel")]]
 #Creates the window with the layout condition.
-Screen=sg.Window("Demokritos' Game of Gravitation",Format,margins=(150,70))
+Screen1=sg.Window("Demokritos' Game of Gravitation",Format1,margins=(150,70))
 #Creating an event loop
 
 while True:
-    event,values=Screen.read()
-    #This will end the program if the user closes the window of presses the move forward button
-    if event == "Random":
-        Format1 =  [ [sg.Text('Would you like to Customize or Run the Default?')],
+    event_series1,values=Screen1.read()
+    if event_series1 == "Random":
+        Format2 =  [ [sg.Text('Would you like to Customize or Run the Default?')],
                     [sg.Button("Customize")], [sg.Button("Default")], [sg.Button("Cancel")]]
-        Screen1 = sg.Window("Demokritos' Game of Gravitation", Format1, margins=(150, 70))
-        event, values = Screen1.read()
-        if event == "Default":
+        Screen2 = sg.Window("Demokritos' Game of Gravitation", Format2, margins=(150, 70))
+        event_series2, values = Screen2.read()
+        if event_series2 == "Default":
             t = 2000  # How many iterations
             DT = 300  # Your delta T jumps
             N = 6
@@ -70,28 +69,39 @@ while True:
             # Defining my storage area for my position values
             State, Mass, Soft = Create_Random(N, Mass, Pos_Bound, Vel_Bound)
             break
-        elif event == "Customize":
-            Format2 =  [ [sg.Text('Setup Your Parameters:')],
-                        [sg.Text('How Many Bodies Would You Like to Simulate?'), sg.Input(key='-INPUT-')],
-                        [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'), sg.InputText(key='-INPUT-')],
-                        [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'), sg.InputText(key='-INPUT-')],
-                        [sg.Text('What are the Masses of the Bodies? (kg)'), sg.InputText(key='-INPUT-')],
-                        [sg.Text('How Many Iterations Would You Like to Execute?'), sg.InputText(key='-INPUT-')],
-                        [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'), sg.InputText(key='-INPUT-')],
-                        [sg.Button("Ok")], [sg.Button("Cancel")]]
-            Screen2 = sg.Window("Demokritos' Game of Gravitation", Format, margins=(150, 70))
-            event, values = Screen2.read()
-            break
-        elif event == "Cancel" or event == sg.WIN_CLOSED:
+        elif event_series2 == "Customize":
+            Format3 =  [ [sg.Text('Setup Your Parameters:')],
+                        [sg.Text('How Many Bodies Would You Like to Simulate?'),                 sg.Input(key='-N-')],
+                        [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'),      sg.Input(key='-Pos_Bound-')],
+                        [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'),       sg.Input(key='-Vel_Bound-')],
+                        [sg.Text('What are the Masses of the Bodies? (kg)'),                     sg.Input(key='-Mass-')],
+                        [sg.Text('How Many Iterations Would You Like to Execute?'),              sg.Input(key='-t-')],
+                        [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'),  sg.Input(key='-DT-')],
+                        [sg.Button("Okay")], [sg.Button("Cancel")]]
+            Screen3 = sg.Window("Demokritos' Game of Gravitation", Format3, margins=(150, 70))
+            event_series3, values = Screen3.read()
+            if event_series3=='Okay':
+                N         = int(values['-N-'])
+                Pos_Bound = int(values['-Pos_Bound-'])
+                Vel_Bound = int(values['-Vel_Bound-'])
+                Mass      = int(values['-Mass-'])
+                t         = int(values['-t-'])
+                DT        = int(values['-DT-'])
+                print(type(N))
+                State, Mass, Soft = Create_Random(N, Mass, Pos_Bound, Vel_Bound)
+                break
+            if event_series3=="Cancel" or event_series3 == sg.WIN_CLOSED:
+                break
+        elif event_series2 == "Cancel" or event_series2 == sg.WIN_CLOSED:
             break
         break
-    elif event == "Solar System":
+    elif event_series1 == "Solar System":
         t = 2000  # How many iterations
         DT = 36000  # Your delta T jumps
         N = 6
         State, Mass, Soft = Create_Solar_System()
         break
-    elif event=="Cancel" or event == sg.WIN_CLOSED:
+    elif event_series1 =="Cancel" or event_series1 == sg.WIN_CLOSED:
 
         break
 
