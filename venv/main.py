@@ -36,7 +36,7 @@ def set_axes_equal(ax):
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 #This is declaring what your state vector is in terms of keplarian elements.
-a,e,i,ran,w,theta,mu = 6100e3+6378e3,.001,45*(np.pi/180),35*(np.pi/180),30*(np.pi/180),180*(np.pi/180),3.986004415e14
+a,e,i,ran,w,theta,mu = 800e3+6378e3,.0001,.02*(np.pi/180),12*(np.pi/180),13*(np.pi/180),45*(np.pi/180),3.986004415e14
 if e == 0 and i == 0:
     w = 0
     ran = 0
@@ -47,7 +47,7 @@ if e == 0 and i > 0:
 if e > 0 and i == 0:
     ran = 0
 #Defining your start time (Date).
-Epoch=[2001,4,2,12,10,10]
+Epoch=[2010,4,2,12,10,10]
 MD, JD=Julian_Date(Epoch)
 
 #print("Here are your Keplerian Orbital Elements: ","\nSemimajor Axis:",a,"\nEccentricity:",e,"\nInclination: %.2g"%i,"\nRight Accension of Ascending Node:",ran,
@@ -67,15 +67,14 @@ print("Inertial Position Vector:",r_ijk, "meters","\nInertial Velocity Vector:",
 #Setting up the integrator.
 
 t0=0
-tf=6000
+tf=400000
 data_points=1000
 t=np.linspace(t0, tf, data_points)
 init_cond=r_ijk,v_ijk
 init_cond=np.array([init_cond[0][0],init_cond[0][1],init_cond[0][2],init_cond[1][0],init_cond[1][1],init_cond[1][2]])
-r= integrate.ode(Two_Body()).set_integrator("dop853")
+r= integrate.ode(Two_Body_J2_Drag).set_integrator("dop853")
 r.set_initial_value(init_cond,t0).set_f_params()
 y=np.zeros((len(t),len(init_cond)))
-
 y[0,:]=init_cond
 r_mag=np.zeros((1,len(t)))
 r_mag[0,0]=a
