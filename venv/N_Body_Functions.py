@@ -1,9 +1,16 @@
 import time
 import math
 import numpy as np
+import Constants as C
 from Coordinate_Transform import *
 
 M_sun=1.988473e30# kg
+M_Earth = 5.972e24
+M_Moon = 7.34767309e22
+M_Mars = .64171e24
+M_Phobos = 1.066e16
+M_Deimos = 1.476e10
+M_Spacecraft = 100
 AU=149597870700 #m
 State_Norm=1#AU
 Mass_Norm=1#M_sun
@@ -45,6 +52,14 @@ def Create_Mars_System(N):
     #mass=np.transpose(mass,(1,3))
     print(np.shape(mass))
     state = np.array([[0,0,0,0,0,0],[8227315.12407213,4282153.56786034,-170726.75882666,-977.28363949,1926.43920718,-8.28578831],[11485996.03326884,20455037.49258747,425987.6488949,-1177.95580571,660.73160754,34.42792028],[8227315.12407213*1.3,4282153.56786034*1.1,-170726.75882666,-977.28363949,1926.43920718,-8.28578831]])  #if you activate this it'll let you have the first body be any particular value you want.
+    return state, mass, soft
+
+def Create_Earth_Moon_System(N):
+    state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
+    mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
+    soft = 100  # Defining Softening factor
+    mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],M_Spacecraft]])  #if you activate this it'll let you have the first body be any particular value you want.
+    state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
 #__________________________________________________________
@@ -258,10 +273,16 @@ def Ephemeride_Coeff(Planet):
 
     return coeff
 
+def GET_SOI(M,m,a): #Returns the sphere of influence of the
+    r_SOI=a*((m/M)**(2/5))
+    print(r_SOI)
+    return r_SOI
+
 
 
 #This section will report to you the inertial velocity and coorinates with respect to any central body
-a,e,i,ran,w,theta,mu = 9377.07e3,.015, 1.074997*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),4.28284e13 #phobos
+a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #phobos
+#a,e,i,ran,w,theta,mu = 9377.07e3,.015, 1.074997*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),4.28284e13 #phobos
 #a,e,i,ran,w,theta,mu = 23462.89e3,.00001, 1.793*(np.pi/180),25.229*(np.pi/180),208.213*(np.pi/180),187.256*(np.pi/180),4.28284e13 #deimos
 if e == 0 and i == 0:
     w = 0

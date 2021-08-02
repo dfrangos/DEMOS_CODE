@@ -8,6 +8,7 @@ import random as rand
 import mpl_toolkits.mplot3d.axes3d as p3
 import networkx as nx
 import PySimpleGUI as sg
+import Constants as C
 from vpython import *
 from N_Body_Functions import *
 from matplotlib import animation, rc
@@ -48,9 +49,9 @@ def set_axes_equal(ax):
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 ################_______________________________________########################
 
-#Defining my layout condition for the window creation. This is where you setup word prompts and buttons:
+#Creating my layout condition for the window creation. This is where you setup word prompts and buttons:
 sg.theme('DarkAmber')
-Format_Main_Menu= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Mars System")],[sg.Button("Cancel")]]
+Format_Main_Menu= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Earth Moon System")],[sg.Button("Mars System")],[sg.Button("Cancel")]]
 #Creates the window with the layout condition.
 Screen_Main_Menu=sg.Window("Demokritos' Game of Gravitation", Format_Main_Menu, margins=(150, 70))
 #Creating an event loop
@@ -110,93 +111,331 @@ while True:
         second=56
         MJD, JD = Julian_Date([year,month,day,hour,minute,second])
         State, Mass, Soft = Create_Solar_System(N,JD)
+        # Defining my storage area for my position values
+        State_Store = np.zeros((N, 6, t))
+        Accel = Get_Accel(N, State, Mass, Soft)
+
+        for k in range(t):
+            State = Update_State(N, State, Accel, DT, Mass, Soft)
+            State_Store[:, :, k] = State[:, 0:]
+
+            # Saving the State Store Information to a File
+            while Save_to_File == "On":
+                write_to_file = True
+                filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                if write_to_file:
+                    with open(filename, 'wb') as f:
+                        np.save(f, State_Store)
+
+        # This is the animation stuff______________________________
+        # ANIMATION FUNCTION
+        # ___________________________________________________________________________
+
+        fig1 = plt.figure()
+        ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        fig1.add_axes(ax1)
+
+
+        def func(num, dataSet, line, N):
+            # NOTE: there is no .set_data() for 3 dim data...
+            for i in range(N):
+                line[i].set_data(dataSet[i, 0:2, :num])
+                line[i].set_3d_properties(dataSet[i, 2, :num])
+            set_axes_equal(ax1)
+            return line
+
+
+        line = []
+
+        for i in range(N):
+            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_zlabel("z (m)")
+        ax1.set_title("Orbital Trjectory")
+        ax1.grid()
+        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        plt.show()
+        # VPTHON EXPERIMENT
+        # ____________________________
+        EARTH = sphere(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), radius=6378e6,
+                       color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25)
+        VENUS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=5356e6,
+                       color=color.orange, make_trail=True, trail_type='points', interval=10, retain=25)
+        MERCURY = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=4356e6,
+                         color=color.white, make_trail=True, trail_type='points', interval=10, retain=25)
+        SUN = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=7356e6,
+                     color=color.yellow, make_trail=True, trail_type='points', interval=10, retain=25)
+        lamp = local_light(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
+                           color=color.yellow)
+
+        Elabel = label(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), text='EARTH',
+                       xoffset=10, height=10, color=color.blue)
+        Vlabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='VENUS',
+                       xoffset=10, height=10, color=color.yellow)
+        Mlabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='MERCURY',
+                       xoffset=10, height=10, color=color.white)
+        Slabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='SUN',
+                       xoffset=10, height=10, color=color.blue)
+
+        k = 0
+        while k < t:
+            if running:
+                rate(10)
+                EARTH.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+                VENUS.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                MERCURY.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                SUN.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                Elabel.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+                Mlabel.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                Vlabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Slabel.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                k += 1
+
+        break
+    elif event_series1 == "Earth Moon System":
+        t = 20000  # How many iterations
+        DT = 20  # Your delta T jumps
+        N = 3
+        ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
+        # Defining my storage area for my position values
+        State, Mass, Soft = Create_Earth_Moon_System(N)
+        State_Store = np.zeros((N, 6, t))
+        Accel = Get_Accel(N, State, Mass, Soft)
+
+        for k in range(t):
+            State = Update_State(N, State, Accel, DT, Mass, Soft)
+            State_Store[:, :, k] = State[:, 0:]
+
+            # Saving the State Store Information to a File
+            while Save_to_File == "On":
+                write_to_file = True
+                filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                if write_to_file:
+                    with open(filename, 'wb') as f:
+                        np.save(f, State_Store)
+
+        # This is the animation stuff______________________________
+        # ANIMATION FUNCTION
+        # ___________________________________________________________________________
+
+        fig1 = plt.figure()
+        ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        fig1.add_axes(ax1)
+
+
+        def func(num, dataSet, line, N):
+            # NOTE: there is no .set_data() for 3 dim data...
+            for i in range(N):
+                line[i].set_data(dataSet[i, 0:2, :num])
+                line[i].set_3d_properties(dataSet[i, 2, :num])
+            set_axes_equal(ax1)
+            return line
+
+
+        line = []
+
+        for i in range(N):
+            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_zlabel("z (m)")
+        ax1.set_title("Orbital Trjectory")
+        ax1.grid()
+        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        plt.show()
+
+        # VPTHON Section
+        # ____________________________
+        #L = 500
+        #scene.range = L
+        #scene.forward = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
+        running = True
+        def Run(b):
+            global running
+            running = not running
+            if running:
+                b.text = "Pause"
+            else:
+                b.text = "Run"
+
+        button(text="Pause", pos=scene.title_anchor, bind=Run)
+
+        def setspeed(s):
+            wt.text = '{:1.2f}'.format(s.value)
+
+        playrate = slider(min=1, max=3000, value=10, length=220, bind=setspeed, right=15)
+        wt = wtext(text='{:1.2f}'.format(playrate.value))
+
+        SPACECRAFT = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=6,
+                       color=color.green, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
+        MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],
+                         color=color.white, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0.1)
+        EARTH = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],
+                     color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25,shininess=.1)
+
+        Slabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Spacecraft',
+                       xoffset=10, height=10, color=color.green)
+        Mlabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',
+                       xoffset=10, height=10, color=color.white)
+        Elabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',
+                       xoffset=10, height=10, color=color.blue)
+        #BOOTING UP THE SPHERES OF INFLUENCE
+        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon,
+                       color=color.white,opacity=.1)
+        k=0
+        while k < t:
+            if running:
+                rate(playrate.value)
+                #scene.camera.follow(MOON)
+                SPACECRAFT.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                EARTH.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                Slabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Mlabel.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                Elabel.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                k +=1
+            #scene.forward = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                if k==t-1:
+                    k=0
         break
     elif event_series1 == "Mars System":
         t = 2000  # How many iterations
         DT = 2  # Your delta T jumps
         N = 4
+        M_Mars = .64171e24
+        M_Phobos = 1.066e16
+        M_Deimos = 1.476e10
+        ROI_Phobos = GET_SOI(M_Mars, M_Phobos, 9377.07e3)
+        ROI_Deimos = GET_SOI(M_Mars, M_Deimos, 23462.89e3)
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Mars_System(N)
+        State_Store = np.zeros((N, 6, t))
+        Accel = Get_Accel(N, State, Mass, Soft)
+
+        for k in range(t):
+            State = Update_State(N, State, Accel, DT, Mass, Soft)
+            State_Store[:, :, k] = State[:, 0:]
+
+            # Saving the State Store Information to a File
+            while Save_to_File == "On":
+                write_to_file = True
+                filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                if write_to_file:
+                    with open(filename, 'wb') as f:
+                        np.save(f, State_Store)
+
+        # This is the animation stuff______________________________
+        # ANIMATION FUNCTION
+        # ___________________________________________________________________________
+
+        fig1 = plt.figure()
+        ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        fig1.add_axes(ax1)
+
+
+        def func(num, dataSet, line, N):
+            # NOTE: there is no .set_data() for 3 dim data...
+            for i in range(N):
+                line[i].set_data(dataSet[i, 0:2, :num])
+                line[i].set_3d_properties(dataSet[i, 2, :num])
+            set_axes_equal(ax1)
+            return line
+
+
+        line = []
+
+        for i in range(N):
+            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_zlabel("z (m)")
+        ax1.set_title("Orbital Trjectory")
+        ax1.grid()
+        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        plt.show()
+
+        # VPTHON Section
+        # ____________________________
+        # L = 2
+        # scene.range = L
+        #scene.forward = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
+        running = True
+        def Run(b):
+            global running
+            running = not running
+            if running:
+                b.text = "Pause"
+            else:
+                b.text = "Run"
+
+        button(text="Pause", pos=scene.title_anchor, bind=Run)
+
+        SPACECRAFT = sphere(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), radius=10e1,
+                       color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
+        DEIMOS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=6.2e3,
+                       color=color.orange, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
+        PHOBOS = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=11.267e3,
+                         color=color.white, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
+        MARS = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=3.3895e6,
+                     color=color.red, make_trail=True, trail_type='points', interval=10, retain=25,shininess=.1)
+
+        Slabel = label(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), text='SPACECRAFT',
+                       xoffset=10, height=10, color=color.blue)
+        Dlabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='DEIMOS',
+                       xoffset=10, height=10, color=color.yellow)
+        Plabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='PHOBOS',
+                       xoffset=10, height=10, color=color.white)
+        Mlabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='MARS',
+                       xoffset=10, height=10, color=color.red)
+
+        #BOOTING UP THE SPHERES OF INFLUENCE
+
+        ROI_DEIMOS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=ROI_Deimos,
+                         color=color.red,opacity=.82)
+        ROI_PHOBOS = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Phobos,
+                       color=color.red,opacity=.82)
+        k=0
+        while k < t:
+            if running:
+                rate(10)
+                SPACECRAFT.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+                DEIMOS.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                PHOBOS.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                ROI_DEIMOS.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                ROI_PHOBOS.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                scene.camera.follow(PHOBOS)
+                MARS.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                Slabel.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+                Dlabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Plabel.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                Mlabel.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                k +=1
+
+            #scene.forward = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+
+
         break
     elif event_series1 =="Cancel" or event_series1 == sg.WIN_CLOSED:
         break
 
-State_Store = np.zeros((N,6,t))
-Accel       = Get_Accel(N,State,Mass,Soft)
+# ___________________________________________________________________________
+Initial_Energy = Total_Energy(N, State_Store, Mass, 0)
+Final_Energy = Total_Energy(N, State_Store, Mass, -1)
+#print(Initial_Energy)
+#print(Final_Energy)
 
-for k in range(t):
-    State              = Update_State(N,State,Accel,DT,Mass,Soft)
-    State_Store[:,:,k] = State[:,0:]
 
-#Saving the State Store Information to a File
-    while Save_to_File=="On":
-        write_to_file = True
-        filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
-        if write_to_file:
-            with open(filename, 'wb') as f:
-                np.save(f, State_Store)
-
-#This is the animation stuff______________________________
-# ANIMATION FUNCTION
-#___________________________________________________________________________
-
-fig1 = plt.figure()
-ax1 = Axes3D(fig1, auto_add_to_figure=False)
-fig1.add_axes(ax1)
-def func(num, dataSet, line, N):
-    # NOTE: there is no .set_data() for 3 dim data...
-    for i in range(N):
-        line[i].set_data(dataSet[i, 0:2, :num])
-        line[i].set_3d_properties(dataSet[i, 2, :num])
-    set_axes_equal(ax1)
-    return line
-
-line=[]
-
-for i in range(N):
-    line.append(plt.plot(State_Store[i,0,0],State_Store[i,1,0],State_Store[i,2,0],marker=".")[0])
-
-anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
-#anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
-ax1.set_xlabel("x (m)")
-ax1.set_ylabel("y (m)")
-ax1.set_zlabel("z (m)")
-ax1.set_title("Orbital Trjectory")
-ax1.grid()
-ax1.legend(["Body 1", "Body 2","Body 3", "Body 4", "Body 5"])
-plt.show()
-#___________________________________________________________________________
-Initial_Energy=Total_Energy(N, State_Store, Mass, 0)
-Final_Energy=Total_Energy(N, State_Store, Mass, -1)
-print(Initial_Energy)
-print(Final_Energy)
-
-#VPTHON EXPERIMENT
-#____________________________
-EARTH=   sphere(pos=vector(State_Store[3,0,0],State_Store[3,1,0],State_Store[3,2,0]), radius=6378e6,color=color.blue,  make_trail=True, trail_type='points', interval=10, retain=25)
-VENUS=   sphere(pos=vector(State_Store[2,0,0],State_Store[2,1,0],State_Store[2,2,0]), radius=5356e6,color=color.orange,make_trail=True, trail_type='points', interval=10, retain=25)
-MERCURY= sphere(pos=vector(State_Store[1,0,0],State_Store[1,1,0],State_Store[1,2,0]), radius=4356e6,color=color.white, make_trail=True, trail_type='points', interval=10, retain=25)
-SUN=     sphere(pos=vector(State_Store[0,0,0],State_Store[0,1,0],State_Store[0,2,0]), radius=7356e6,color=color.yellow,make_trail=True, trail_type='points', interval=10, retain=25)
-
-Elabel = label(pos=vector(State_Store[3,0,0],State_Store[3,1,0],State_Store[3,2,0]), text='EARTH',
-         xoffset=10, height=10, color=color.blue)
-Vlabel = label(pos=vector(State_Store[2,0,0],State_Store[2,1,0],State_Store[2,2,0]), text='VENUS',
-         xoffset=10, height=10, color=color.yellow)
-Mlabel = label(pos=vector(State_Store[1,0,0],State_Store[1,1,0],State_Store[1,2,0]), text='MERCURY',
-         xoffset=10, height=10, color=color.white)
-Slabel = label(pos=vector(State_Store[0,0,0],State_Store[0,1,0],State_Store[0,2,0]), text='SUN',
-         xoffset=10, height=10, color=color.blue)
-
-for k in range(t):
-    rate(10)
-    EARTH.pos    = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
-    VENUS.pos    = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-    MERCURY.pos  = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-    SUN.pos      = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-    Elabel.pos   = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
-    Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-    Vlabel.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-    Slabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
 
 
