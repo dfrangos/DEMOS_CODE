@@ -197,7 +197,7 @@ while True:
 
         break
     elif event_series1 == "Earth Moon System":
-        t = 20000  # How many iterations
+        t = 200  # How many iterations
         DT = 20  # Your delta T jumps
         N = 3
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
@@ -274,7 +274,7 @@ while True:
         wt = wtext(text='{:1.2f}'.format(playrate.value))
 
         SPACECRAFT = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=6,
-                       color=color.green, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
+                       color=color.green, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0.1)
         MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],
                          color=color.white, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0.1)
         EARTH = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],
@@ -290,10 +290,13 @@ while True:
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon,
                        color=color.white,opacity=.1)
         k=0
+        scale = 1e-10 / 1e2
+        scene.range = 100000
+        scene.fov = .01
         while k < t:
             if running:
                 rate(playrate.value)
-                #scene.camera.follow(MOON)
+                scene.camera.follow(MOON)
                 SPACECRAFT.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
@@ -381,6 +384,7 @@ while True:
 
         button(text="Pause", pos=scene.title_anchor, bind=Run)
 
+
         SPACECRAFT = sphere(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), radius=10e1,
                        color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0)
         DEIMOS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=6.2e3,
@@ -402,10 +406,13 @@ while True:
         #BOOTING UP THE SPHERES OF INFLUENCE
 
         ROI_DEIMOS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=ROI_Deimos,
-                         color=color.red,opacity=.82)
+                         color=color.white,opacity=.12)
         ROI_PHOBOS = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Phobos,
-                       color=color.red,opacity=.82)
+                       color=color.white,opacity=.12)
         k=0
+        scale = 1e-10/1e2
+        scene.range = 100000
+        scene.fov=.01
         while k < t:
             if running:
                 rate(10)
@@ -414,7 +421,7 @@ while True:
                 PHOBOS.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_DEIMOS.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 ROI_PHOBOS.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                scene.camera.follow(PHOBOS)
+                #scene.camera.follow(PHOBOS)
                 MARS.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
                 Slabel.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
                 Dlabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
