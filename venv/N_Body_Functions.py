@@ -281,7 +281,7 @@ def GET_SOI(M,m,a): #Returns the sphere of influence of the
 
 
 #This section will report to you the inertial velocity and coorinates with respect to any central body
-a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #phobos
+a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #moon
 #a,e,i,ran,w,theta,mu = 9377.07e3,.015, 1.074997*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),4.28284e13 #phobos
 #a,e,i,ran,w,theta,mu = 23462.89e3,.00001, 1.793*(np.pi/180),25.229*(np.pi/180),208.213*(np.pi/180),187.256*(np.pi/180),4.28284e13 #deimos
 if e == 0 and i == 0:

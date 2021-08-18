@@ -9,6 +9,7 @@ import mpl_toolkits.mplot3d.axes3d as p3
 import networkx as nx
 import PySimpleGUI as sg
 import Constants as C
+import os
 from vpython import *
 from N_Body_Functions import *
 from matplotlib import animation, rc
@@ -20,6 +21,7 @@ from Solar_System import *
 from Coordinate_Transform import *
 np.random.seed(1)
 Save_to_File      = "Off"
+print(os.getcwd())
 def set_axes_equal(ax):
     '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
     cubes as cubes, etc..  This is one possible solution to Matplotlib's
@@ -161,11 +163,23 @@ while True:
         plt.show()
         # VPTHON EXPERIMENT
         # ____________________________
+
+        running = True
+        def Run(b):
+            global running
+            running = not running
+            if running:
+                b.text = "Pause"
+            else:
+                b.text = "Run"
+        button(text="Pause", pos=scene.title_anchor, bind=Run)
+
+
         EARTH = sphere(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), radius=6378e6,
                        color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25)
-        VENUS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=5356e6,
+        VENUS = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=2356e6,
                        color=color.orange, make_trail=True, trail_type='points', interval=10, retain=25)
-        MERCURY = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=4356e6,
+        MERCURY = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=7356e5,
                          color=color.white, make_trail=True, trail_type='points', interval=10, retain=25)
         SUN = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=7356e6,
                      color=color.yellow, make_trail=True, trail_type='points', interval=10, retain=25)
@@ -197,8 +211,8 @@ while True:
 
         break
     elif event_series1 == "Earth Moon System":
-        t = 200  # How many iterations
-        DT = 20  # Your delta T jumps
+        t = 1000  # How many iterations
+        DT = 100  # Your delta T jumps
         N = 3
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
@@ -257,6 +271,7 @@ while True:
         #scene.range = L
         #scene.forward = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
         running = True
+        #This function binds the action of the pause button that will be defined in the future
         def Run(b):
             global running
             running = not running
@@ -265,47 +280,71 @@ while True:
             else:
                 b.text = "Run"
 
+
         button(text="Pause", pos=scene.title_anchor, bind=Run)
 
+        #This function creates the menu that will be used to select which object you want to snap the view to.
+        def Menu(m):
+            val=m.selected
+            if val=="Earth":
+                scene.camera.follow(EARTH)
+            elif val=="Moon":
+                scene.camera.follow(MOON)
+            elif val=="Spacecraft":
+                scene.camera.follow(CRAFT1)
+
+        labels = ["Earth", "Moon", "Craft1"]
+        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=Menu, right=30, pos=scene.title_anchor)
+
+
+        # This function creates the slide bar that will allow the user to change the rate at which the animation is played.
         def setspeed(s):
             wt.text = '{:1.2f}'.format(s.value)
 
-        playrate = slider(min=1, max=3000, value=10, length=220, bind=setspeed, right=15)
-        wt = wtext(text='{:1.2f}'.format(playrate.value))
 
-        SPACECRAFT = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=6,
-                       color=color.green, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0.1)
-        MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],
-                         color=color.white, make_trail=True, trail_type='points', interval=10, retain=25,shininess=0.1)
-        EARTH = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],
-                     color=color.blue, make_trail=True, trail_type='points', interval=10, retain=25,shininess=.1)
+        playrate = slider(min=1, max=3000, value=10, length=220, bind=setspeed, right=15, pos=scene.title_anchor)
+        wt = wtext(text='{:1.2f}'.format(playrate.value),pos=scene.title_anchor)
 
-        Slabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Spacecraft',
-                       xoffset=10, height=10, color=color.green)
-        Mlabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',
-                       xoffset=10, height=10, color=color.white)
-        Elabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',
-                       xoffset=10, height=10, color=color.blue)
+        str_format = "Time: {:.1f} JD\n---------------\n<b>Earth</b>\n" \
+                     "X: {:.1f} m\n" \
+                     "Y: {:.1f} m\n" \
+                     "Z: {:.1f} m\n" \
+                     "VX: {:.1f} m/s\n" \
+                     "VY: {:.1f} m/s\n" \
+                     "VZ: {:.1f} m/s\n"
+
+
+        CRAFT1 = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=30, retain=2500, shininess=0.1)
+        MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=3000, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
+        EARTH = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=25, shininess=.1, texture={'file':"\Images\Earth.jpg"})
+        Slabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
+        Mlabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon', xoffset=10, height=10, color=color.white)
+        Elabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth', xoffset=10, height=10, color=color.blue)
         #BOOTING UP THE SPHERES OF INFLUENCE
-        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon,
-                       color=color.white,opacity=.1)
+        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
+        #readout = button(text=State_Store[2, 0, 0], pos=scene.title_anchor, bind=)
         k=0
         scale = 1e-10 / 1e2
-        scene.range = 100000
-        scene.fov = .01
+        scene.range = 1000000
+        scene.fov = .0001
+
         while k < t:
             if running:
                 rate(playrate.value)
-                scene.camera.follow(MOON)
-                SPACECRAFT.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                CRAFT1.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 EARTH.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
                 Slabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 Mlabel.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 Elabel.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+
+                #Creating the text at the bottom.
+                scene.caption=(str_format.format(k,State_Store[0, 0, k], State_Store[0, 1, k],
+                                                   State_Store[0, 2, k], State_Store[0, 3, k],
+                                                   State_Store[0, 4, k],
+                                                   State_Store[0, 5, k]))
                 k +=1
-            #scene.forward = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 if k==t-1:
                     k=0
         break
