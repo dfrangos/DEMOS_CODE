@@ -279,6 +279,16 @@ def GET_SOI(M,m,a): #Returns the sphere of influence of the
     return r_SOI
 
 
+def Abs_Rel(N_Origin,State_Store):
+    #N_Origin is the parent body
+    Relative_Store=np.zeros(State_Store.shape)
+    for i in range(State_Store.shape[0]):
+        Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[N_Origin,:,:]
+
+    return Relative_Store
+
+
+
 
 #This section will report to you the inertial velocity and coorinates with respect to any central body
 a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #moon

@@ -265,6 +265,11 @@ while True:
         ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
         plt.show()
 
+
+        State_Store_wrt_Earth  = Abs_Rel(0, State_Store)
+        State_Store_wrt_Moon   = Abs_Rel(1, State_Store)
+        State_Store_wrt_Craft1 = Abs_Rel(2, State_Store)
+
         # VPTHON Section
         # ____________________________
         #L = 500
@@ -284,14 +289,19 @@ while True:
         button(text="Pause", pos=scene.title_anchor, bind=Run)
 
         #This function creates the menu that will be used to select which object you want to snap the view to.
+        valnum=0
         def Menu(m):
             val=m.selected
+            global valnum
             if val=="Earth":
                 scene.camera.follow(EARTH)
+                valnum=0
             elif val=="Moon":
                 scene.camera.follow(MOON)
-            elif val=="Spacecraft":
+                valnum = 1
+            elif val=="Craft1":
                 scene.camera.follow(CRAFT1)
+                valnum = 2
 
         labels = ["Earth", "Moon", "Craft1"]
         menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=Menu, right=30, pos=scene.title_anchor)
@@ -305,25 +315,29 @@ while True:
         playrate = slider(min=1, max=3000, value=10, length=220, bind=setspeed, right=15, pos=scene.title_anchor)
         wt = wtext(text='{:1.2f}'.format(playrate.value),pos=scene.title_anchor)
 
-        str_format = "Time: {:.1f} JD\n---------------\n<b>Earth</b>\n" \
-                     "X: {:.1f} m\n" \
-                     "Y: {:.1f} m\n" \
-                     "Z: {:.1f} m\n" \
-                     "VX: {:.1f} m/s\n" \
-                     "VY: {:.1f} m/s\n" \
-                     "VZ: {:.1f} m/s\n"
+        str_format = '''Time: {:.1f} JD
+                        ----------
+                        <b>{:s}</b> 
+                        Absolute                 Relative     
+                        X: {:.2f} m              X: {:.2f} m
+                        Y: {:.2f} m              Y: {:.2f} m
+                        Z: {:.2f} m              Z: {:.2f} m
+                        VX: {:.2f} m/s           VX: {:.2f} m/s
+                        VY: {:.2f} m/s           VY: {:.2f} m/s
+                        VZ: {:.2f} m/s           VZ: {:.2f} m/s'''
 
-
-        CRAFT1 = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=30, retain=2500, shininess=0.1)
-        MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=3000, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
-        EARTH = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=25, shininess=.1, texture={'file':"\Images\Earth.jpg"})
-        Slabel = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
-        Mlabel = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon', xoffset=10, height=10, color=color.white)
-        Elabel = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth', xoffset=10, height=10, color=color.blue)
+        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=30, retain=2500, shininess=0.1)
+        MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=3000, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
+        EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=25, shininess=.1, texture={'file':"\Images\Earth.jpg"})
+        Slabel   = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
+        Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon', xoffset=10, height=10, color=color.white)
+        Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth', xoffset=10, height=10, color=color.blue)
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
-        #readout = button(text=State_Store[2, 0, 0], pos=scene.title_anchor, bind=)
         k=0
+        scene.forward=vector(0,0,1)
+        scene.up = vector(1,0,0)
+
         scale = 1e-10 / 1e2
         scene.range = 1000000
         scene.fov = .0001
@@ -331,19 +345,40 @@ while True:
         while k < t:
             if running:
                 rate(playrate.value)
-                CRAFT1.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                CRAFT1.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                MOON.pos     = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                EARTH.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-                Slabel.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                Mlabel.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                Elabel.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                EARTH.pos    = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                Slabel.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
                 #Creating the text at the bottom.
-                scene.caption=(str_format.format(k,State_Store[0, 0, k], State_Store[0, 1, k],
-                                                   State_Store[0, 2, k], State_Store[0, 3, k],
-                                                   State_Store[0, 4, k],
-                                                   State_Store[0, 5, k]))
+                #if valnum==0:
+                scene.caption=(str_format.format(k,labels[valnum],
+                                                   State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
+                                                   State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
+                                                   State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
+                                                   State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
+                                                   State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
+                                                   State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k]))
+                # elif valnum==1:
+                #     scene.caption=(str_format.format(k,labels[valnum],
+                #                                        State_Store[valnum, 0, k],State_Store_wrt_Moon[valnum, 0, k],
+                #                                        State_Store[valnum, 1, k],State_Store_wrt_Moon[valnum, 1, k],
+                #                                        State_Store[valnum, 2, k],State_Store_wrt_Moon[valnum, 2, k],
+                #                                        State_Store[valnum, 3, k],State_Store_wrt_Moon[valnum, 3, k],
+                #                                        State_Store[valnum, 4, k],State_Store_wrt_Moon[valnum, 4, k],
+                #                                        State_Store[valnum, 5, k],State_Store_wrt_Moon[valnum, 5, k]))
+                # elif valnum==2:
+                #     scene.caption=(str_format.format(k,labels[valnum],
+                #                                        State_Store[valnum, 0, k],State_Store_wrt_Craft1[valnum, 0, k],
+                #                                        State_Store[valnum, 1, k],State_Store_wrt_Craft1[valnum, 1, k],
+                #                                        State_Store[valnum, 2, k],State_Store_wrt_Craft1[valnum, 2, k],
+                #                                        State_Store[valnum, 3, k],State_Store_wrt_Craft1[valnum, 3, k],
+                #                                        State_Store[valnum, 4, k],State_Store_wrt_Craft1[valnum, 4, k],
+                #                                        State_Store[valnum, 5, k],State_Store_wrt_Craft1[valnum, 5, k]))
+
                 k +=1
                 if k==t-1:
                     k=0
@@ -480,7 +515,6 @@ Initial_Energy = Total_Energy(N, State_Store, Mass, 0)
 Final_Energy = Total_Energy(N, State_Store, Mass, -1)
 #print(Initial_Energy)
 #print(Final_Energy)
-
 
 
 
