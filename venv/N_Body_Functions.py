@@ -7,10 +7,6 @@ from Coordinate_Transform import *
 M_sun=1.988473e30# kg
 M_Earth = 5.972e24
 M_Moon = 7.34767309e22
-M_Mars = .64171e24
-M_Phobos = 1.066e16
-M_Deimos = 1.476e10
-M_Spacecraft = 100
 AU=149597870700 #m
 State_Norm=1#AU
 Mass_Norm=1#M_sun
@@ -33,10 +29,10 @@ def Create_Random(N,Mass,Pos_Bound,Vel_Bound):
 
 def Create_Solar_System(N,JD):
     #Defining Softening factor
-    soft = 6378e5/AU
+    soft = 6378e5/State_Norm
     state=np.zeros((N,6))
     mass=np.ones((1,N))
-    mass=mass*M_sun
+    mass=mass*Mass_Norm
     for i in range(1,N):
         state[i,:], mass[0,i] = any_planet(JD, i, "")
     #state=np.array([[0,0,0,0,0,0],[(.41*AU),0,0,0,47.9e3,0],[.74*AU,0,0,50,35e3,-150],[1.0*AU,.02*AU,.01*AU,100,29.8e3,-100]])/AU
@@ -47,7 +43,7 @@ def Create_Mars_System(N):
     state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 100  # Defining Softening factor
-    mass  = np.array([[.64171e24,1.066e16,1.476e10,50]])  #if you activate this it'll let you have the first body be any particular value you want.
+    mass  = np.array([[C.C["Mars"]["Mass"],C.C["Phobos"]["Mass"],C.C["Deimos"]["Mass"],C.C["Craft1"]["Mass"]]])  #if you activate this it'll let you have the first body be any particular value you want.
     #mass=mass.T
     #mass=np.transpose(mass,(1,3))
     print(np.shape(mass))
@@ -58,8 +54,16 @@ def Create_Earth_Moon_System(N):
     state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 100  # Defining Softening factor
-    mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],M_Spacecraft]])  #if you activate this it'll let you have the first body be any particular value you want.
+    mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],C.C["Craft1"]["Mass"]]])  #if you activate this it'll let you have the first body be any particular value you want.
     state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
+    return state, mass, soft
+
+def Create_The_Three_Body_Problem(N):
+    state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
+    mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
+    soft = 1988500e24  # Defining Softening factor
+    mass = np.array([[C.C["Body1"]["Mass"], C.C["Body2"]["Mass"],C.C["Body3"]["Mass"],C.C["Body4"]["Mass"]]])*Mass_Norm  # if you activate this it'll let you have the first body be any particular value you want.
+    state = np.array([[1*AU, 1.2*AU, .02*AU, -1e3, -.3e3, -.02e3], [-.01*AU, .09*AU, -.03*AU, 2e3, .5e3, .02e3],[-15*AU, 1*AU, .2*AU, -.8e3, .4e3, -.02e3],[-550*AU,0,0,0.005e3,4e3,.1e3]])/State_Norm  # if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
 #__________________________________________________________
@@ -79,12 +83,29 @@ def Get_Accel(N,state,mass,soft):
                 accel[i,:]-=G*mass[0,j]*np.array([(Dist[0])/(Dist_Mag**3),(Dist[1])/(Dist_Mag**3),(Dist[2])/(Dist_Mag**3)])
     return accel
 
-def Update_State(n,state,accel,dt,mass,soft):
-    for i in range(n):
-        state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
-        state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
-        accel = Get_Accel(n,state,mass,soft)
-        state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
+def Update_State(n,state,accel,dt,mass,soft,flag):
+
+#Flag's Structure
+    burn_flag,target_body,dv_mag,origin_body,direction=flag
+
+    if flag[0]==0:
+        for i in range(n):
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
+            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
+            accel        = Get_Accel(n,state,mass,soft)
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
+    elif flag[0]==1:
+        for i in range(n):
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
+            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
+            accel        = Get_Accel(n,state,mass,soft)
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
+        relative_state         = state[target_body,:]-state[origin_body,:]
+        v_mag                  = np.linalg.norm(relative_state[3:])
+        unit                   = relative_state[3:]/v_mag
+        dv_vec                 = unit*dv_mag*direction
+        relative_state[3:]    += dv_vec
+        state[target_body, 3:] = relative_state[3:]+state[origin_body,3:]
     return state
 
 def Total_Energy(n, state, mass, index):
@@ -278,17 +299,20 @@ def GET_SOI(M,m,a): #Returns the sphere of influence of the
     print(r_SOI)
     return r_SOI
 
-
-def Abs_Rel(N_Origin,State_Store):
-    #N_Origin is the parent body
+def Abs_Rel(n_origin,State_Store):
+    #N_Origin is the N value of the parent body
     Relative_Store=np.zeros(State_Store.shape)
     for i in range(State_Store.shape[0]):
-        Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[N_Origin,:,:]
+        Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[n_origin,:,:]
 
     return Relative_Store
 
+# def Inert_Kep(n_origin,relative_store,mu,r,a):
+#
+#     v_ijk=np
+#  h=
 
-
+# return a,e,w,ran,i,theta
 
 #This section will report to you the inertial velocity and coorinates with respect to any central body
 a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #moon

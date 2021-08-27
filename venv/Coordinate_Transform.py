@@ -28,7 +28,6 @@ def IJKPQW(i,ran,w):
     print(ijkpqw.shape)
     return ijkpqw
 
-
 def Peri_Inert (r_pqw,v_pqw,ijkpqw):
     r_ijk = np.matmul(ijkpqw, r_pqw)
     v_ijk = np.matmul(ijkpqw, v_pqw)
