@@ -211,7 +211,7 @@ while True:
 
         break
     elif event_series1 == "Earth Moon System":
-        t = 8000  # How many iterations
+        t = 1000  # How many iterations
         DT = 500  # Your delta T jumps
         N = 3
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
@@ -219,14 +219,14 @@ while True:
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=1000
-        Burn_Index_2=4564
+        Burn_Index=1870
+        Burn_Index_2=6290
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
             if k==Burn_Index:
-                Flag=[1,2,133,0,1]
+                Flag=[1,2,300,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,400,1,-1]
+                Flag=[1,2,355,1,-1]
             else:
                 Flag=[0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -335,12 +335,14 @@ while True:
                         VZ: {:.2f} m/s           VZ: {:.2f} m/s
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
 
-        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=1, retain=120, shininess=0.1)
+        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=1, retain=700, shininess=0.1)
         MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
         EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
         Slabel   = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
         Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon', xoffset=10, height=10, color=color.white)
         Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth', xoffset=10, height=10, color=color.blue)
+        oribt = ring(pos=vector(7000e3,8000e3,0),size=vec(20000,40000000,2000000))
+        #oribt = extrusion(path=[vec(0,0,0), vec(2000000,0,0)],shape=shapes.ellipse(width=50000e3, height=300000e3),pos=vec(0,0,0))
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
         k=0

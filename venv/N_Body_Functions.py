@@ -307,12 +307,30 @@ def Abs_Rel(n_origin,State_Store):
 
     return Relative_Store
 
-# def Inert_Kep(n_origin,relative_store,mu,r,a):
-#
-#     v_ijk=np
-#  h=
+def Inert_Kep(state_vec,mu):
+    #https://downloads.rene-schwarz.com/download/M002-Cartesian_State_Vectors_to_Keplerian_Orbit_Elements.pdf
+    r_ijk = state_vec[:3]
+    v_ijk = state_vec[3:]
+    h     = np.cross(r_ijk,v_ijk)
+    e_vec = (np.cross(v_ijk,h)/mu)-r_ijk/(np.linalg.norm(r_ijk))
+    e=np.linalg.norm(e_vec)
+    n_vec=np.cross(np.array([0, 0, 1]), h)
+    n=np.linalg.norm(n_vec)
+    f=np.arccos(np.dot(e_vec, r_ijk) / (e * np.linalg.norm(r_ijk)))
+    if np.dot(r_ijk,v_ijk)<0:
+        f= 2 * np.pi - f
+    i = np.arccos(h[2]/np.linalg.norm(h))
+    E=np.arctan2(np.tan(f / 2), np.sqrt((1 + e) / (1 - e)))
+    ran=np.arccos(n_vec[0] / n)
+    if n_vec[1]<0:
+        ran=2*np.pi-ran
+    w=np.arccos(np.dot(n_vec,e_vec) / (n*e))
+    if e_vec[2]<0:
+        w=2*np.pi-w
+    M=E-e*np.sin(E)
+    a=1/ (   (2/np.linalg.norm(r_ijk) ) - ( (np.linalg.norm(v_ijk)**2)/mu  ) )
 
-# return a,e,w,ran,i,theta
+    return a,e,w,ran,i,f,M,E
 
 #This section will report to you the inertial velocity and coorinates with respect to any central body
 a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #moon
