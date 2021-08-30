@@ -3,6 +3,15 @@ import math
 import numpy as np
 import Constants as C
 from Coordinate_Transform import *
+import scipy
+import matplotlib
+import tkinter
+
+#Just doing some short hand stuff for SOCAHTOA
+sin=np.sin
+cos=np.cos
+tan=np.tan
+sqrt=np.sqrt
 
 M_sun=1.988473e30# kg
 M_Earth = 5.972e24
@@ -58,7 +67,7 @@ def Create_Earth_Moon_System(N):
     state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
-def Create_The_Three_Body_Problem(N):
+def Create_TRAPIST_1(N):
     state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 1988500e24  # Defining Softening factor
@@ -66,7 +75,15 @@ def Create_The_Three_Body_Problem(N):
     state = np.array([[1*AU, 1.2*AU, .02*AU, -1e3, -.3e3, -.02e3], [-.01*AU, .09*AU, -.03*AU, 2e3, .5e3, .02e3],[-15*AU, 1*AU, .2*AU, -.8e3, .4e3, -.02e3],[-550*AU,0,0,0.005e3,4e3,.1e3]])/State_Norm  # if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
-#__________________________________________________________
+def Create_The_Jovian_System(N):
+    state = np.zeros((N, 6))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
+    mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
+    soft = 1988500e24  # Defining Softening factor
+    mass = np.array([[C.C["Body1"]["Mass"], C.C["Body2"]["Mass"],C.C["Body3"]["Mass"],C.C["Body4"]["Mass"]]])*Mass_Norm  # if you activate this it'll let you have the first body be any particular value you want.
+    state = np.array([[1*AU, 1.2*AU, .02*AU, -1e3, -.3e3, -.02e3], [-.01*AU, .09*AU, -.03*AU, 2e3, .5e3, .02e3],[-15*AU, 1*AU, .2*AU, -.8e3, .4e3, -.02e3],[-550*AU,0,0,0.005e3,4e3,.1e3]])/State_Norm  # if you activate this it'll let you have the first body be any particular value you want.
+    return state, mass, soft
+
+#Your Scenario Functions#__________________________________________________________
 
 def Get_Accel(N,state,mass,soft):
     accel=np.zeros((N,3))
@@ -128,7 +145,7 @@ def Total_Energy(n, state, mass, index):
     Total=Kinetic_Energy-PE
     return Total
 
-def any_planet(JD, Planet, Frame):
+def Any_Planet(JD, Planet, Frame):
     T = (JD - 2451545.0) / 36525
     deg2rad = np.pi / 180
 
@@ -294,21 +311,27 @@ def Ephemeride_Coeff(Planet):
 
     return coeff
 
-def GET_SOI(M,m,a): #Returns the sphere of influence of the
+#Auxillary Functions and Features
+
+def GET_SOI(M,m,a): #Returns the sphere of influence of the body in question
     r_SOI=a*((m/M)**(2/5))
     print(r_SOI)
     return r_SOI
 
 def Abs_Rel(n_origin,State_Store):
-    #N_Origin is the N value of the parent body
+    #n_origin is the N value of the parent body
     Relative_Store=np.zeros(State_Store.shape)
     for i in range(State_Store.shape[0]):
         Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[n_origin,:,:]
 
     return Relative_Store
 
+    #Deining the transformation matrix that you'll multiply your r and v perifocal vectors by.
+    #This matrix will need to be converted from a 1 x 6 to a 3x3.
+
 def Inert_Kep(state_vec,mu):
     #https://downloads.rene-schwarz.com/download/M002-Cartesian_State_Vectors_to_Keplerian_Orbit_Elements.pdf
+    #This takes a state vector in inertial, (doesnt matter if its abs or rel) and out puts the cooresponding values of the keplerian orbit
     r_ijk = state_vec[:3]
     v_ijk = state_vec[3:]
     h     = np.cross(r_ijk,v_ijk)
@@ -332,27 +355,48 @@ def Inert_Kep(state_vec,mu):
 
     return a,e,w,ran,i,f,M,E
 
-#This section will report to you the inertial velocity and coorinates with respect to any central body
-a,e,i,ran,w,theta,mu = 384399e3,0.0549, 5.145*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),3.9860044188e14 #moon
-#a,e,i,ran,w,theta,mu = 9377.07e3,.015, 1.074997*(np.pi/180),128.694*(np.pi/180),213.804*(np.pi/180),45*(np.pi/180),4.28284e13 #phobos
-#a,e,i,ran,w,theta,mu = 23462.89e3,.00001, 1.793*(np.pi/180),25.229*(np.pi/180),208.213*(np.pi/180),187.256*(np.pi/180),4.28284e13 #deimos
-if e == 0 and i == 0:
-    w = 0
-    ran = 0
-# This condition is for when you're circular and inclined.
-if e == 0 and i > 0:
-    w = 0
-# This condition is for when you're elliptical and equatorial.
-if e > 0 and i == 0:
-    ran = 0
+def IJKPQW(i,ran,w):
+    ijkpqw = np.array([[ (cos(ran)*cos(w)-sin(ran)*sin(w)*cos(i)),   (-cos(ran)*sin(w)-sin(ran)*cos(w)*cos(i)),    (sin(ran)*sin(i))],
+                         [(sin(ran)*cos(w)+cos(ran)*sin(w)*cos(i)),   (-sin(ran)*sin(w)+cos(ran)*cos(w)*cos(i)),    (-cos(ran)*sin(i))],
+                                    [(sin(w)*sin(i)),                           (cos(w)*sin(i)),                      (cos(i))]             ])
+    print(ijkpqw.shape)
+    return ijkpqw
 
-r,v=Kep_Peri(a,e,i,ran,w,theta,mu)
+def Kep_Inert(a,e,i,ran,w,theta,mu):
+    # Defining Semilatus Rectum
+    p = a * (1 - (e ** 2))
 
-#Invoking the IJKPQW function to output the trasformation matrix that will be used to trasform perifocal to inertial.
-ijkpqw= IJKPQW(i,ran,w)
+    # Deining the perifocal (PQW) position and velocity vector.
+    r_pqw = np.array([(p * cos(theta)) / (1 + e * cos(theta)), (p * sin(theta)) / (1 + e * cos(theta)), (0)])
+    v_pqw = np.array([-sqrt(mu / p) * sin(theta), sqrt(mu / p) * (e + cos(theta)), (0)])
+    ijkpqw = np.array([[(cos(ran) * cos(w) - sin(ran) * sin(w) * cos(i)),
+                        (-cos(ran) * sin(w) - sin(ran) * cos(w) * cos(i)), (sin(ran) * sin(i))],
+                       [(sin(ran) * cos(w) + cos(ran) * sin(w) * cos(i)),
+                        (-sin(ran) * sin(w) + cos(ran) * cos(w) * cos(i)), (-cos(ran) * sin(i))],
+                       [(sin(w) * sin(i)), (cos(w) * sin(i)), (cos(i))]])
+    r_ijk = np.matmul(ijkpqw, r_pqw)
+    v_ijk = np.matmul(ijkpqw, v_pqw)
 
-r_ijk,v_ijk=Peri_Inert(r,v,ijkpqw)
-print("Inertial Position Vector:",r_ijk, "meters","\nInertial Velocity Vector:",v_ijk, "meters/second")
+    print("Inertial Position Vector:",r_ijk, "meters","\nInertial Velocity Vector:",v_ijk, "meters/second")
+    return r_ijk, v_ijk
+
+#Extra Functions____________________________________________________
+
+def Peri_Inert(r_pqw, v_pqw, ijkpqw):
+    r_ijk = np.matmul(ijkpqw, r_pqw)
+    v_ijk = np.matmul(ijkpqw, v_pqw)
+    return r_ijk, v_ijk
+
+
+def Kep_Peri(a, e, i, ran, w, theta, mu):
+    # Defining Semilatus Rectum
+    p = a * (1 - (e ** 2))
+
+    # Deining the perifocal (PQW) position and velocity vector.
+    r_pqw = np.array([(p * cos(theta)) / (1 + e * cos(theta)), (p * sin(theta)) / (1 + e * cos(theta)), (0)])
+    v_pqw = np.array([-sqrt(mu / p) * sin(theta), sqrt(mu / p) * (e + cos(theta)), (0)])
+
+    return r_pqw, v_pqw
 
 
 

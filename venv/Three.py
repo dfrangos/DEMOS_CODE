@@ -50,14 +50,14 @@ def set_axes_equal(ax):
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 ################_______________________________________########################
-
 #Creating my layout condition for the window creation. This is where you setup word prompts and buttons:
 sg.theme('DarkAmber')
-Format_Main_Menu= [[sg.Text("Please Choose Your Scenario!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Earth Moon System")],[sg.Button("Mars System")],[sg.Button("The Three Body Problem")],[sg.Button("Cancel")]]
+Format_Main_Menu= [[sg.Text("Which Scenario Would You Like to Eplore?!?!")],[sg.Button("Random")],[sg.Button("Solar System")],[sg.Button("Earth-Moon System")],[sg.Button("Martian System")],[sg.Button("Jovian System")],[sg.Button("TRAPIST-1 System")],[sg.Button("Cancel")]]
 #Creates the window with the layout condition.
 Screen_Main_Menu=sg.Window("Demokritos' Game of Gravitation", Format_Main_Menu, margins=(150, 70))
 #Creating an event loop
 while True:
+    #https://pypi.org/project/PySimpleGUI/#:~:text=PySimpleGUI%20is%20a%20Python%20package%20that%20enables%20Python,frameworks%20to%20display%20and%20interact%20with%20your%20window.
     event_series1,values=Screen_Main_Menu.read()
     if event_series1 == "Random":
         Format_Random =  [ [sg.Text('Would you like to Customize or Run the Default?')],
@@ -72,17 +72,76 @@ while True:
             Pos_Bound = 6.84e4
             Vel_Bound = 300
             # Defining my storage area for my position values
-            State, Mass, Soft = Create_Random(N, Mass, Pos_Bound, Vel_Bound)
+            State, Mass, Soft = Create_Random(N,Mass,Pos_Bound,Vel_Bound)
+            State_Store = np.zeros((N, 6, t))
+            Accel = Get_Accel(N, State, Mass, Soft)
+            Burn_Index = 1870
+            Burn_Index_2 = 6290
+            for k in range(t):
+                # Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
+                if k == Burn_Index:
+                    Flag = [0, 2, 300, 0, 1]
+                elif k == Burn_Index_2:
+                    Flag = [0, 2, 355, 1, -1]
+                else:
+                    Flag = [0, 0, 0, 0, 0]
+                State = Update_State(N, State, Accel, DT, Mass, Soft, Flag)
+                State_Store[:, :, k] = State[:, 0:]
+                # Saving the State Store Information to a File
+                while Save_to_File == "On":
+                    write_to_file = True
+                    filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                    if write_to_file:
+                        with open(filename, 'wb') as f:
+                            np.save(f, State_Store)
+
+            # This is the animation stuff______________________________
+            # ANIMATION FUNCTION
+            # ___________________________________________________________________________
+
+            fig1 = plt.figure()
+            ax1 = Axes3D(fig1, auto_add_to_figure=False)
+            fig1.add_axes(ax1)
+
+
+            def func(num, dataSet, line, N):
+                # NOTE: there is no .set_data() for 3 dim data...
+                for i in range(N):
+                    line[i].set_data(dataSet[i, 0:2, :num])
+                    line[i].set_3d_properties(dataSet[i, 2, :num])
+                set_axes_equal(ax1)
+                return line
+
+
+            line = []
+
+            for i in range(N):
+                line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+            anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+            # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+            ax1.set_xlabel("x (m)")
+            ax1.set_ylabel("y (m)")
+            ax1.set_zlabel("z (m)")
+            ax1.set_title("Orbital Trjectory")
+            ax1.grid()
+            ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+            plt.show()
+
+            State_Store_wrt_Earth  = Abs_Rel(0, State_Store)
+            State_Store_wrt_Moon   = Abs_Rel(1, State_Store)
+            State_Store_wrt_Craft1 = Abs_Rel(2, State_Store)
             break
         elif event_series2 == "Customize":
             Format3 =  [ [sg.Text('Setup Your Parameters:')],
-                        [sg.Text('How Many Bodies Would You Like to Simulate?'),                 sg.Input(key='-N-')],
-                        [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'),      sg.Input(key='-Pos_Bound-')],
-                        [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'),       sg.Input(key='-Vel_Bound-')],
-                        [sg.Text('What are the Masses of the Bodies? (kg)'),                     sg.Input(key='-Mass-')],
-                        [sg.Text('How Many Iterations Would You Like to Execute?'),              sg.Input(key='-t-')],
-                        [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'),  sg.Input(key='-DT-')],
-                        [sg.Button("Okay")], [sg.Button("Cancel")]]
+                         [sg.Text('How Many Bodies Would You Like to Simulate?'),                 sg.Input(key='-N-')],
+                         [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'),      sg.Input(key='-Pos_Bound-')],
+                         [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'),       sg.Input(key='-Vel_Bound-')],
+                         [sg.Text('What are the Masses of the Bodies? (kg)'),                     sg.Input(key='-Mass-')],
+                         [sg.Text('How Many Iterations Would You Like to Execute?'),              sg.Input(key='-t-')],
+                         [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'),  sg.Input(key='-DT-')],
+                         [sg.Button("Okay")],
+                         [sg.Button("Cancel")]]
             Screen3 = sg.Window("Demokritos' Game of Gravitation", Format3, margins=(150, 70))
             event_series3, values = Screen3.read()
             if event_series3=='Okay':
@@ -92,14 +151,82 @@ while True:
                 Mass      = int(values['-Mass-'])
                 t         = int(values['-t-'])
                 DT        = int(values['-DT-'])
-                print(type(N))
-                State, Mass, Soft = Create_Random(N, Mass, Pos_Bound, Vel_Bound)
+                User_Input_Data = N, Pos_Bound, Vel_Bound, Mass, t, DT
+                File = open("User_Input_Custom.csv", "w")
+                # https://www.youtube.com/watch?v=irnj19jz8uI
+                for i in range(len(User_Input_Data)):
+                    Output = ""
+                    Output += str(User_Input_Data[i])
+                    Output += '\n'
+                    File.write(Output)
+                    File.close
+                # Defining my storage area for my position values
+                State, Mass, Soft = Create_Random(N,Mass,Pos_Bound,Vel_Bound)
+                State_Store = np.zeros((N, 6, t))
+                Accel = Get_Accel(N, State, Mass, Soft)
+                Burn_Index = 1870
+                Burn_Index_2 = 6290
+                for k in range(t):
+                    # Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
+                    if k == Burn_Index:
+                        Flag = [0, 2, 300, 0, 1]
+                    elif k == Burn_Index_2:
+                        Flag = [0, 2, 355, 1, -1]
+                    else:
+                        Flag = [0, 0, 0, 0, 0]
+                    State = Update_State(N, State, Accel, DT, Mass, Soft, Flag)
+                    State_Store[:, :, k] = State[:, 0:]
+                    # Saving the State Store Information to a File
+                    while Save_to_File == "On":
+                        write_to_file = True
+                        filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                        if write_to_file:
+                            with open(filename, 'wb') as f:
+                                np.save(f, State_Store)
+
+                # This is the animation stuff______________________________
+                # ANIMATION FUNCTION
+                # ___________________________________________________________________________
+
+                fig1 = plt.figure()
+                ax1 = Axes3D(fig1, auto_add_to_figure=False)
+                fig1.add_axes(ax1)
+
+
+                def func(num, dataSet, line, N):
+                    # NOTE: there is no .set_data() for 3 dim data...
+                    for i in range(N):
+                        line[i].set_data(dataSet[i, 0:2, :num])
+                        line[i].set_3d_properties(dataSet[i, 2, :num])
+                    set_axes_equal(ax1)
+                    return line
+
+
+                line = []
+
+                for i in range(N):
+                    line.append(
+                        plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+                anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+                # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+                ax1.set_xlabel("x (m)")
+                ax1.set_ylabel("y (m)")
+                ax1.set_zlabel("z (m)")
+                ax1.set_title("Orbital Trjectory")
+                ax1.grid()
+                ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+                plt.show()
+
+                State_Store_wrt_Earth = Abs_Rel(0, State_Store)
+                State_Store_wrt_Moon = Abs_Rel(1, State_Store)
+                State_Store_wrt_Craft1 = Abs_Rel(2, State_Store)
                 break
+
             if event_series3=="Cancel" or event_series3 == sg.WIN_CLOSED:
                 break
         elif event_series2 == "Cancel" or event_series2 == sg.WIN_CLOSED:
             break
-        break
     elif event_series1 == "Solar System":
         t = 5000  # How many iterations
         DT = 36000  # Your delta T jumps
@@ -210,10 +337,10 @@ while True:
                 k += 1
 
         break
-    elif event_series1 == "Earth Moon System":
+    elif event_series1 == "Earth-Moon System":
         t = 1000  # How many iterations
         DT = 500  # Your delta T jumps
-        N = 3
+        N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Earth_Moon_System(N)
@@ -396,7 +523,7 @@ while True:
                 if k==t-1:
                     k=0
         break
-    elif event_series1 == "Mars System":
+    elif event_series1 == "Martian System":
         t = 2000  # How many iterations
         DT = 20  # Your delta T jumps
         N = 4
@@ -520,7 +647,7 @@ while True:
 
 
         break
-    elif event_series1 == "The Three Body Problem":
+    elif event_series1 == "Jovian System":
         t = 12*80  # How many iterations
         DT = 3600*24*28  # Your delta T jumps
         N = 4
@@ -691,15 +818,185 @@ while True:
                 if k == t - 1:
                     k = 0
         break
+    elif event_series1 == "TRAPIST-1 System":
+        t = 12*80  # How many iterations
+        DT = 3600*24*28  # Your delta T jumps
+        N = 4
+        # Defining my storage area for my position values
+        State, Mass, Soft = Create_The_Three_Body_Problem(N)
+        State_Store = np.zeros((N, 6, t))
+        Accel = Get_Accel(N, State, Mass, Soft)
 
-    elif event_series1 =="Cancel" or event_series1 == sg.WIN_CLOSED:
+        for k in range(t):
+            State = Update_State(N, State, Accel, DT, Mass, Soft)
+            State_Store[:, :, k] = State[:, 0:]
+
+            # Saving the State Store Information to a File
+            while Save_to_File == "On":
+                write_to_file = True
+                filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+                if write_to_file:
+                    with open(filename, 'wb') as f:
+                        np.save(f, State_Store)
+
+        # This is the animation stuff______________________________
+        # ANIMATION FUNCTION
+        # ___________________________________________________________________________
+
+        fig1 = plt.figure()
+        ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        fig1.add_axes(ax1)
+
+
+        def func(num, dataSet, line, N):
+            # NOTE: there is no .set_data() for 3 dim data...
+            for i in range(N):
+                line[i].set_data(dataSet[i, 0:2, :num])
+                line[i].set_3d_properties(dataSet[i, 2, :num])
+            set_axes_equal(ax1)
+            return line
+
+
+        line = []
+
+        for i in range(N):
+            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+
+        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_zlabel("z (m)")
+        ax1.set_title("Orbital Trjectory")
+        ax1.grid()
+        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4"])
+        plt.show()
+
+        State_Store_wrt_Body1 = Abs_Rel(0, State_Store)
+        State_Store_wrt_Body2 = Abs_Rel(1, State_Store)
+        State_Store_wrt_Body3 = Abs_Rel(2, State_Store)
+
+        # VPTHON Section
+        # ____________________________
+        running = True
+
+        # This function binds the action of the pause button that will be defined in the future
+        def Run(b):
+            global running
+            running = not running
+            if running:
+                b.text = "Pause"
+            else:
+                b.text = "Run"
+
+        button(text="Pause", pos=scene.title_anchor, bind=Run)
+
+        # This function creates the menu that will be used to select which object you want to snap the view to.
+        valnum = 0
+
+        def Menu(m):
+            val = m.selected
+            global valnum
+            if val == "Body1":
+                scene.camera.follow(BODY1)
+                valnum = 0
+            elif val == "Body2":
+                scene.camera.follow(BODY2)
+                valnum = 1
+            elif val == "Body3":
+                scene.camera.follow(BODY3)
+                valnum = 2
+            elif val == "Body4":
+                scene.camera.follow(BODY4)
+                valnum = 3
+
+
+        labels = ["Body1","Body2","Body3","Body4"]
+        menu(choices=['Choose an Object','Body1','Body2','Body3','Body4'], bind=Menu, right=30, pos=scene.title_anchor)
+
+        # This function creates the slide bar that will allow the user to change the rate at which the animation is played.
+        def setspeed(s):
+            wt.text = '{:1.2f}'.format(s.value)
+
+        playrate = slider(min=1, max=3000, value=10, length=220, bind=setspeed, right=15, pos=scene.title_anchor)
+        wt = wtext(text='{:1.2f}'.format(playrate.value), pos=scene.title_anchor)
+
+        str_format = '''Time: {:.1f} JD
+                                ----------
+                                <b>{:s}</b> 
+                                Absolute                 Relative     
+                                X: {:.2f} m              X: {:.2f} m
+                                Y: {:.2f} m              Y: {:.2f} m
+                                Z: {:.2f} m              Z: {:.2f} m
+                                VX: {:.2f} m/s           VX: {:.2f} m/s
+                                VY: {:.2f} m/s           VY: {:.2f} m/s
+                                VZ: {:.2f} m/s           VZ: {:.2f} m/s'''
+
+
+
+        BODY1 = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
+                       radius=C.C["Body1"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=250,
+                       shininess=.1, texture={'file': "\Images\Sun.jpg"})
+        BODY2 = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),
+                      radius=C.C["Body2"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=300,
+                      shininess=0.1, texture={'file': "\Images\Sun.jpg"})
+        BODY3 = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]),
+                        radius=C.C["Body3"]["Radius"], make_trail=True, trail_type='curve',
+                        interval=30, retain=2500, shininess=0.1,texture={'file': "\Images\Sun.jpg"})
+        BODY4 = sphere(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]),
+                        radius=C.C["Body3"]["Radius"], make_trail=True, trail_type='curve',
+                        interval=30, retain=2500, shininess=0.1,texture={'file': "\Images\Earth.jpg"})
+        B1label = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Body1',
+                       xoffset=10, height=10, color=color.white)
+        B2label = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Body2',
+                       xoffset=10, height=10, color=color.white)
+        B3label = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Body3',
+                       xoffset=10, height=10, color=color.white)
+        B4label = label(pos=vector(State_Store[3, 0, 0], State_Store[3, 1, 0], State_Store[3, 2, 0]), text='Body4',
+                        xoffset=10, height=10, color=color.blue)
+        k = 0
+        #Changes the axes to the proper visual orientation
+        scene.forward = vector(0, 0, 1)
+        scene.up = vector(1, 0, 0)
+        #Changes the fov and scale to attempt to fit everything into the image
+        scale = 1e-10 / 1e2
+        scene.range = 1000000
+        scene.fov = .0001
+
+        while k < t:
+            if running:
+                rate(playrate.value)
+
+                BODY1.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                BODY2.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                BODY3.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                BODY4.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+                B1label.pos = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                B2label.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                B3label.pos = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                B4label.pos = vector(State_Store[3, 0, k], State_Store[3, 1, k], State_Store[3, 2, k])
+
+                # Creating the text at the bottom.
+                # if valnum==0:
+                scene.caption = (str_format.format(k, labels[valnum],
+                                                   State_Store[valnum, 0, k], State_Store_wrt_Earth[valnum, 0, k],
+                                                   State_Store[valnum, 1, k], State_Store_wrt_Earth[valnum, 1, k],
+                                                   State_Store[valnum, 2, k], State_Store_wrt_Earth[valnum, 2, k],
+                                                   State_Store[valnum, 3, k], State_Store_wrt_Earth[valnum, 3, k],
+                                                   State_Store[valnum, 4, k], State_Store_wrt_Earth[valnum, 4, k],
+                                                   State_Store[valnum, 5, k], State_Store_wrt_Earth[valnum, 5, k]))
+                k += 1
+                if k == t - 1:
+                    k = 0
+        break
+    elif event_series1 == "Cancel" or event_series1 == sg.WIN_CLOSED:
         break
 
 # ___________________________________________________________________________
-Initial_Energy = Total_Energy(N, State_Store, Mass, 0)
-Final_Energy = Total_Energy(N, State_Store, Mass, -1)
-#print(Initial_Energy)hjjbh
-#print(Final_Energy)
+# Initial_Energy = Total_Energy(N, State_Store, Mass, 0)
+# Final_Energy = Total_Energy(N, State_Store, Mass, -1)
+# #print(Initial_Energy)hjjbh
+# #print(Final_Energy)
 
 
 
