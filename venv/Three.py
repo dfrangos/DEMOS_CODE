@@ -10,6 +10,7 @@ import networkx as nx
 import PySimpleGUI as sg
 import Constants as C
 import os
+import csv
 from vpython import *
 from N_Body_Functions import *
 from matplotlib import animation, rc
@@ -19,6 +20,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from future.moves import tkinter as Tkinter
 from Solar_System import *
 from Coordinate_Transform import *
+
 np.random.seed(1)
 Save_to_File      = "Off"
 print(os.getcwd())
@@ -61,7 +63,7 @@ while True:
     event_series1,values=Screen_Main_Menu.read()
     if event_series1 == "Random":
         Format_Random =  [ [sg.Text('Would you like to Customize or Run the Default?')],
-                    [sg.Button("Customize")], [sg.Button("Default")], [sg.Button("Cancel")]]
+                         [sg.Button("Customize")], [sg.Button("Default")], [sg.Button("Cancel")]]
         Screen_Random = sg.Window("Demokritos' Game of Gravitation", Format_Random, margins=(150, 70))
         event_series2, values = Screen_Random.read()
         if event_series2 == "Default":
@@ -133,33 +135,53 @@ while True:
             State_Store_wrt_Craft1 = Abs_Rel(2, State_Store)
             break
         elif event_series2 == "Customize":
+            #This section will read the user data that was inputed in the previous run
+            #https://pythonspot.com/reading-csv-files-in-python/
+            UserData  = []
+            N=          []
+            Pos_Bound = []
+            Vel_Bound = []
+            Mass =      []
+            t =         []
+            DT =        []
+            with open('User_Input_Custom.txt','r') as File:
+                lines=File.readlines()
+                N        = int(lines[0])
+                Pos_Bound= float(lines[1])
+                Vel_Bound= float(lines[2])
+                Mass     = float(lines[3])
+                t        = int(lines[4])
+                DT       = float(lines[5])
+            File.close()
+
             Format3 =  [ [sg.Text('Setup Your Parameters:')],
-                         [sg.Text('How Many Bodies Would You Like to Simulate?'),                 sg.Input(key='-N-')],
-                         [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'),      sg.Input(key='-Pos_Bound-')],
-                         [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'),       sg.Input(key='-Vel_Bound-')],
-                         [sg.Text('What are the Masses of the Bodies? (kg)'),                     sg.Input(key='-Mass-')],
-                         [sg.Text('How Many Iterations Would You Like to Execute?'),              sg.Input(key='-t-')],
-                         [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'),  sg.Input(key='-DT-')],
+                         [sg.Text('How Many Bodies Would You Like to Simulate? (int)'),          sg.InputText(str(N),         key='-N-')         ],
+                         [sg.Text('What Positional Bounds Would You Like to Use?  -\+ (m)'),     sg.InputText(str(Pos_Bound), key='-Pos_Bound-') ],
+                         [sg.Text('What Velocity Bounds Would You Like to Use?  -\+(m/s)'),      sg.InputText(str(Vel_Bound), key='-Vel_Bound-') ],
+                         [sg.Text('What are the Masses of the Bodies? (kg)'),                    sg.InputText(str(Mass),      key='-Mass-')      ],
+                         [sg.Text('How Many Iterations Would You Like to Execute? (int)'),       sg.InputText(str(t),         key='-t-')         ],
+                         [sg.Text('How Far in Time Would You Like to Jump For Each Iteration?'), sg.InputText(str(DT),        key='-DT-')        ],
                          [sg.Button("Okay")],
                          [sg.Button("Cancel")]]
+
             Screen3 = sg.Window("Demokritos' Game of Gravitation", Format3, margins=(150, 70))
             event_series3, values = Screen3.read()
             if event_series3=='Okay':
                 N         = int(values['-N-'])
-                Pos_Bound = int(values['-Pos_Bound-'])
-                Vel_Bound = int(values['-Vel_Bound-'])
-                Mass      = int(values['-Mass-'])
+                Pos_Bound = float(values['-Pos_Bound-'])
+                Vel_Bound = float(values['-Vel_Bound-'])
+                Mass      = float(values['-Mass-'])
                 t         = int(values['-t-'])
-                DT        = int(values['-DT-'])
+                DT        = float(values['-DT-'])
                 User_Input_Data = N, Pos_Bound, Vel_Bound, Mass, t, DT
-                File = open("User_Input_Custom.csv", "w")
+                with open("User_Input_Custom.txt", "w") as File:
                 # https://www.youtube.com/watch?v=irnj19jz8uI
-                for i in range(len(User_Input_Data)):
-                    Output = ""
-                    Output += str(User_Input_Data[i])
-                    Output += '\n'
-                    File.write(Output)
-                    File.close
+                    for i in range(len(User_Input_Data)):
+                        Output = ""
+                        Output += str(User_Input_Data[i])
+                        Output += '\n'
+                        File.write(Output)
+                File.close()
                 # Defining my storage area for my position values
                 State, Mass, Soft = Create_Random(N,Mass,Pos_Bound,Vel_Bound)
                 State_Store = np.zeros((N, 6, t))
@@ -338,8 +360,17 @@ while True:
 
         break
     elif event_series1 == "Earth-Moon System":
-        t = 1000  # How many iterations
-        DT = 500  # Your delta T jumps
+        with open('User_Input_Custom.txt', 'r') as File:
+            lines = File.readlines()
+            N = int(lines[0])
+            Pos_Bound = float(lines[1])
+            Vel_Bound = float(lines[2])
+            Mass = float(lines[3])
+            t = int(lines[4])
+            DT = float(lines[5])
+        File.close()
+        t = 2000  # How many iterations
+        DT = 600  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
@@ -351,9 +382,9 @@ while True:
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
             if k==Burn_Index:
-                Flag=[1,2,300,0,1]
+                Flag=[0,2,300,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,355,1,-1]
+                Flag=[0,2,355,1,-1]
             else:
                 Flag=[0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -462,14 +493,22 @@ while True:
                         VZ: {:.2f} m/s           VZ: {:.2f} m/s
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
 
-        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True, trail_type='curve', interval=1, retain=700, shininess=0.1)
-        MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
-        EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
+        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=1400, shininess=0.1)
+        MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],   make_trail=True,   trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
+        EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],  make_trail=True,   trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
         Slabel   = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
-        Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon', xoffset=10, height=10, color=color.white)
-        Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth', xoffset=10, height=10, color=color.blue)
-        oribt = ring(pos=vector(7000e3,8000e3,0),size=vec(20000,40000000,2000000))
-        #oribt = extrusion(path=[vec(0,0,0), vec(2000000,0,0)],shape=shapes.ellipse(width=50000e3, height=300000e3),pos=vec(0,0,0))
+        Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',   xoffset=10, height=10, color=color.white)
+        Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
+        test=np.array([3.26102982e+08 * .72, 1.69424827e+08 * .65, -3.24537602e+07, -454.81023569, 957.4095185, -21.92975525])
+        #Craft1_H = Get_Angular(test[0:3], test[3:])
+        Craft1_H  = Get_Angular(State_Store_wrt_Earth[2,0:3,0],State_Store_wrt_Earth[2,3:,0])
+        Craft1_H  = Craft1_H/np.linalg.norm(Craft1_H)
+        Craft1_Kep_Elements, Craft1_e_vec=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
+        Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
+        Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
+        Craft1_Orb_Offset_Vect=1*(Craft1_Kep_Elements[0]/2)*(Craft1_e_vec)
+        Craft1_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]), size=vec(200000,Craft1_Kep_Elements[0]*2,Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2)*2),thickness=1000000, axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
+        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
         k=0
@@ -497,11 +536,11 @@ while True:
                                                    State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
                                                    State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
                                                    State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
-                                                   np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,:3, k]),
+                                                   np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,:3, k]),
                                                    State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
                                                    State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
                                                    State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k],
-                                                 np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,3:, k])))
+                                                   np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,3:, k])))
                 # elif valnum==1:
                 #     scene.caption=(str_format.format(k,labels[valnum],
                 #                                        State_Store[valnum, 0, k],State_Store_wrt_Moon[valnum, 0, k],

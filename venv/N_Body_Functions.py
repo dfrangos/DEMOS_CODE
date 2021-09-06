@@ -21,7 +21,7 @@ State_Norm=1#AU
 Mass_Norm=1#M_sun
 G = ((6.67408e-11) / (State_Norm ** 3)) * Mass_Norm
 
-#Your Scenario Functions_________________________
+#Your Scenario Functions________________________________________________________________________________________________
 def Create_Random(N,Mass,Pos_Bound,Vel_Bound):
     state = np.zeros((N, 6)) # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
     mass = np.zeros((1, N)) # Creating an Empty Mass Vector (0,0,0,0....)
@@ -83,7 +83,7 @@ def Create_The_Jovian_System(N):
     state = np.array([[1*AU, 1.2*AU, .02*AU, -1e3, -.3e3, -.02e3], [-.01*AU, .09*AU, -.03*AU, 2e3, .5e3, .02e3],[-15*AU, 1*AU, .2*AU, -.8e3, .4e3, -.02e3],[-550*AU,0,0,0.005e3,4e3,.1e3]])/State_Norm  # if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
-#Your Scenario Functions#__________________________________________________________
+#Your Scenario Functions#_______________________________________________________________________________________________
 
 def Get_Accel(N,state,mass,soft):
     accel=np.zeros((N,3))
@@ -311,7 +311,7 @@ def Ephemeride_Coeff(Planet):
 
     return coeff
 
-#Auxillary Functions and Features
+#Auxillary Functions and Features_______________________________________________________________________________________
 
 def GET_SOI(M,m,a): #Returns the sphere of influence of the body in question
     r_SOI=a*((m/M)**(2/5))
@@ -353,14 +353,7 @@ def Inert_Kep(state_vec,mu):
     M=E-e*np.sin(E)
     a=1/ (   (2/np.linalg.norm(r_ijk) ) - ( (np.linalg.norm(v_ijk)**2)/mu  ) )
 
-    return a,e,w,ran,i,f,M,E
-
-def IJKPQW(i,ran,w):
-    ijkpqw = np.array([[ (cos(ran)*cos(w)-sin(ran)*sin(w)*cos(i)),   (-cos(ran)*sin(w)-sin(ran)*cos(w)*cos(i)),    (sin(ran)*sin(i))],
-                         [(sin(ran)*cos(w)+cos(ran)*sin(w)*cos(i)),   (-sin(ran)*sin(w)+cos(ran)*cos(w)*cos(i)),    (-cos(ran)*sin(i))],
-                                    [(sin(w)*sin(i)),                           (cos(w)*sin(i)),                      (cos(i))]             ])
-    print(ijkpqw.shape)
-    return ijkpqw
+    return [a,e,w,ran,i,f,M,E],e_vec
 
 def Kep_Inert(a,e,i,ran,w,theta,mu):
     # Defining Semilatus Rectum
@@ -380,13 +373,16 @@ def Kep_Inert(a,e,i,ran,w,theta,mu):
     print("Inertial Position Vector:",r_ijk, "meters","\nInertial Velocity Vector:",v_ijk, "meters/second")
     return r_ijk, v_ijk
 
-#Extra Functions____________________________________________________
+def Get_Angular(r_ijk,v_ijk):
+    h = np.cross(r_ijk, v_ijk)
+    return h
+
+#Extra Functions________________________________________________________________________________________________________
 
 def Peri_Inert(r_pqw, v_pqw, ijkpqw):
     r_ijk = np.matmul(ijkpqw, r_pqw)
     v_ijk = np.matmul(ijkpqw, v_pqw)
     return r_ijk, v_ijk
-
 
 def Kep_Peri(a, e, i, ran, w, theta, mu):
     # Defining Semilatus Rectum
@@ -397,6 +393,13 @@ def Kep_Peri(a, e, i, ran, w, theta, mu):
     v_pqw = np.array([-sqrt(mu / p) * sin(theta), sqrt(mu / p) * (e + cos(theta)), (0)])
 
     return r_pqw, v_pqw
+
+def IJKPQW(i,ran,w):
+    ijkpqw = np.array([[ (cos(ran)*cos(w)-sin(ran)*sin(w)*cos(i)),   (-cos(ran)*sin(w)-sin(ran)*cos(w)*cos(i)),    (sin(ran)*sin(i))],
+                         [(sin(ran)*cos(w)+cos(ran)*sin(w)*cos(i)),   (-sin(ran)*sin(w)+cos(ran)*cos(w)*cos(i)),    (-cos(ran)*sin(i))],
+                                    [(sin(w)*sin(i)),                           (cos(w)*sin(i)),                      (cos(i))]             ])
+    print(ijkpqw.shape)
+    return ijkpqw
 
 
 
