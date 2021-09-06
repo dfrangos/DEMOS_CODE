@@ -506,8 +506,8 @@ while True:
         Craft1_Kep_Elements, Craft1_e_vec=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
         Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
         Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
-        Craft1_Orb_Offset_Vect=1*(Craft1_Kep_Elements[0]/2)*(Craft1_e_vec)
-        Craft1_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]), size=vec(200000,Craft1_Kep_Elements[0]*2,Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2)*2),thickness=1000000, axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
+        Craft1_Orb_Offset_Vect=-1*(Craft1_Kep_Elements[0]/2)*(Craft1_e_vec)
+        Craft1_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]), size=vector(100,Craft1_Kep_Elements[0]*20,Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2)*2),thickness=1000000, axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
         Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
