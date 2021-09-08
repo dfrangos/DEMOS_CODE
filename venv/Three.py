@@ -494,21 +494,45 @@ while True:
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
 
         CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=1400, shininess=0.1)
+        CRAFT2   = sphere(pos=vector(State_Store[0, 0, 0]+State_Store_wrt_Earth[2,0,0], State_Store[0, 1, 0]+State_Store_wrt_Earth[2,1,0], State_Store[0, 2, 0]+State_Store_wrt_Earth[2,3,0]),radius=C.C["Craft1"]["Radius"], color=color.blue, make_trail=True, trail_type='curve',interval=1, retain=1400, shininess=0.1)
         MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],   make_trail=True,   trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
         EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],  make_trail=True,   trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
-        Slabel   = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
+        C1label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
+        C2label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft2',xoffset=10, height=10, color=color.blue)
         Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',   xoffset=10, height=10, color=color.white)
         Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
         test=np.array([3.26102982e+08 * .72, 1.69424827e+08 * .65, -3.24537602e+07, -454.81023569, 957.4095185, -21.92975525])
-        #Craft1_H = Get_Angular(test[0:3], test[3:])
+
         Craft1_H  = Get_Angular(State_Store_wrt_Earth[2,0:3,0],State_Store_wrt_Earth[2,3:,0])
         Craft1_H  = Craft1_H/np.linalg.norm(Craft1_H)
         Craft1_Kep_Elements, Craft1_e_vec=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
+        Semi_Major=float(Craft1_Kep_Elements[0])
+        Semi_Minor=float(Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2))
         Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
         Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
         Craft1_Orb_Offset_Vect=-1*(Craft1_Kep_Elements[0]/2)*(Craft1_e_vec)
-        Craft1_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]), size=vector(100,Craft1_Kep_Elements[0]*20,Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2)*2),thickness=1000000, axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
-        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
+        print(Semi_Minor)
+        print(Semi_Major)
+        Craft1_Rel_Orb = extrusion(
+            path=[vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
+                  vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]+1000)],
+            shape=[shapes.ellipse(width=Semi_Minor, height=Semi_Major),
+                   shapes.ellipse(width=Semi_Minor * .97, height= Semi_Major * .97)],
+            pos=vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
+                    State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
+            axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
+        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
+                              origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
+        #vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])
+
+
+        #Craft_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]),axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]),size=vector(100e3,Semi_Minor*2,Semi_Major*2))
+        #Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
+        #axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2])
+        #TEST_RING = ring(pos=vector(0,0,0),size=vector(200e3,6378e3*2,6378e3*3))
+        #TEST_RING2 = ring(pos=vector(0, 0, 0),size=vector(200e3, Craft1_Kep_Elements[0]*np.sqrt(1-.25**2), 46000e3),)
+
+
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
         k=0
@@ -523,10 +547,14 @@ while True:
             if running:
                 rate(playrate.value)
                 CRAFT1.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                CRAFT2.pos   = vector(State_Store[0, 0, k]+State_Store_wrt_Earth[2,0,k], State_Store[0, 1, k]+State_Store_wrt_Earth[2,1,k], State_Store[0, 2, k]+State_Store_wrt_Earth[2,3,k])
                 MOON.pos     = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 EARTH.pos    = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-                Slabel.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                C1label.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                C2label.pos = vector(State_Store[0, 0, k] + State_Store_wrt_Earth[2, 0, k],
+                                    State_Store[0, 1, k] + State_Store_wrt_Earth[2, 1, k],
+                                    State_Store[0, 2, k] + State_Store_wrt_Earth[2, 3, k])
                 Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
