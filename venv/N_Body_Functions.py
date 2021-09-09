@@ -64,7 +64,7 @@ def Create_Earth_Moon_System(N):
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 100  # Defining Softening factor
     mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],C.C["Craft1"]["Mass"]]])  #if you activate this it'll let you have the first body be any particular value you want.
-    Craft1_State_Vector=Kep_Inert(40000e3+6378e3,.4,.025,0,0,np.pi/3,C.C["Earth"]["Mu"])
+    Craft1_State_Vector=Kep_Inert(37000e3+6378e3,.6,.1,0,0,np.pi/3,C.C["Earth"]["Mu"])
     state = np.array([[0, 0, 0, 0, 0, 0],[3.26102982e+08, 1.69424827e+08, -3.24537602e+07, -454.81023569, 957.4095185, -21.92975525],Craft1_State_Vector])
     #state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft

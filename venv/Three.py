@@ -369,7 +369,7 @@ while True:
             t = int(lines[4])
             DT = float(lines[5])
         File.close()
-        t = 2000  # How many iterations
+        t = 4000  # How many iterations
         DT = 600  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
@@ -494,14 +494,12 @@ while True:
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
 
         CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=1400, shininess=0.1)
-        CRAFT2   = sphere(pos=vector(State_Store[0, 0, 0]+State_Store_wrt_Earth[2,0,0], State_Store[0, 1, 0]+State_Store_wrt_Earth[2,1,0], State_Store[0, 2, 0]+State_Store_wrt_Earth[2,3,0]),radius=C.C["Craft1"]["Radius"], color=color.blue, make_trail=True, trail_type='curve',interval=1, retain=1400, shininess=0.1)
         MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],   make_trail=True,   trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
         EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],  make_trail=True,   trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
         C1label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
         C2label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft2',xoffset=10, height=10, color=color.blue)
         Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',   xoffset=10, height=10, color=color.white)
         Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
-        test=np.array([3.26102982e+08 * .72, 1.69424827e+08 * .65, -3.24537602e+07, -454.81023569, 957.4095185, -21.92975525])
 
         Craft1_H  = Get_Angular(State_Store_wrt_Earth[2,0:3,0],State_Store_wrt_Earth[2,3:,0])
         Craft1_H  = Craft1_H/np.linalg.norm(Craft1_H)
@@ -510,22 +508,35 @@ while True:
         Semi_Minor=float(Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2))
         Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
         Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
-        Craft1_Orb_Offset_Vect=-1*(Craft1_Kep_Elements[0]/2)*(Craft1_e_vec)
+        Craft1_Orb_Offset_Vect=-1*  np.sqrt((Semi_Major/2)**2 + (Semi_Minor/2)**2)                 *(Craft1_e_vec)
         print(Semi_Minor)
         print(Semi_Major)
+        print(Craft1_Kep_Elements[2])
+
         Craft1_Rel_Orb = extrusion(
-            path=[vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
-                  vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]+1000)],
-            shape=[shapes.ellipse(width=Semi_Minor, height=Semi_Major),
-                   shapes.ellipse(width=Semi_Minor * .97, height= Semi_Major * .97)],
-            pos=vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
+            path  =[vec(0, 0, 0),vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])],
+            shape =[shapes.ellipse(
+                width=Semi_Major,
+                height=Semi_Minor), shapes.ellipse(
+                width=Semi_Major * .98,
+                height=Semi_Minor * .98)],
+            pos   =vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
                     State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
-            axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
-        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
+            color=color.white)
+        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2],
+                              axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
                               origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
-        #vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])
 
-
+        # TESTELLISPSE = extrusion(
+        #     path=[vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
+        #           vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]+1000)],
+        #     shape=[shapes.ellipse(width=Semi_Minor, height=Semi_Major),
+        #            shapes.ellipse(width=Semi_Minor * .97, height= Semi_Major * .97)],
+        #     pos=vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
+        #             State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
+        #     axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
+        # TESTELLISPSE.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
+        #                       origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
         #Craft_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]),axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]),size=vector(100e3,Semi_Minor*2,Semi_Major*2))
         #Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
         #axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2])
@@ -546,17 +557,14 @@ while True:
         while k < t:
             if running:
                 rate(playrate.value)
-                CRAFT1.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                CRAFT2.pos   = vector(State_Store[0, 0, k]+State_Store_wrt_Earth[2,0,k], State_Store[0, 1, k]+State_Store_wrt_Earth[2,1,k], State_Store[0, 2, k]+State_Store_wrt_Earth[2,3,k])
-                MOON.pos     = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                EARTH.pos    = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-                C1label.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                C2label.pos = vector(State_Store[0, 0, k] + State_Store_wrt_Earth[2, 0, k],
-                                    State_Store[0, 1, k] + State_Store_wrt_Earth[2, 1, k],
-                                    State_Store[0, 2, k] + State_Store_wrt_Earth[2, 3, k])
-                Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                CRAFT1.pos        = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Craft1_Rel_Orb.pos= vector(State_Store[0, 0, k]+ Craft1_Orb_Offset_Vect[0], State_Store[0, 1, k]+ Craft1_Orb_Offset_Vect[1], State_Store[0, 2, k]+ Craft1_Orb_Offset_Vect[2])
+                MOON.pos          = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                ROI_MOON.pos      = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                EARTH.pos         = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                C1label.pos       = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                Mlabel.pos        = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                Elabel.pos        = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
                 #Creating the text at the bottom.
                 #if valnum==0:
