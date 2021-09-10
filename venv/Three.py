@@ -369,22 +369,22 @@ while True:
             t = int(lines[4])
             DT = float(lines[5])
         File.close()
-        t = 4000  # How many iterations
-        DT = 600  # Your delta T jumps
+        t = 2000  # How many iterations
+        DT = 60  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=1870
-        Burn_Index_2=6290
+        Burn_Index=50
+        Burn_Index_2=5490
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
             if k==Burn_Index:
-                Flag=[0,2,300,0,1]
+                Flag=[1,2,1.5e3,0,1]
             elif k==Burn_Index_2:
-                Flag=[0,2,355,1,-1]
+                Flag=[0,2,.900e3,1,-1]
             else:
                 Flag=[0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -477,7 +477,7 @@ while True:
             wt.text = '{:1.2f}'.format(s.value)
 
 
-        playrate = slider(min=1, max=1000, value=10, length=520, bind=setspeed, right=15, pos=scene.title_anchor)
+        playrate = slider(min=1, max=1000, value=1, length=520, bind=setspeed, right=15, pos=scene.title_anchor)
         wt = wtext(text='{:1.2f}'.format(playrate.value),pos=scene.title_anchor)
 
         str_format = '''Time: {:.1f} JD
@@ -508,41 +508,21 @@ while True:
         Semi_Minor=float(Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2))
         Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
         Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
-        Craft1_Orb_Offset_Vect=-1*  np.sqrt((Semi_Major/2)**2 + (Semi_Minor/2)**2)                 *(Craft1_e_vec)
-        print(Semi_Minor)
-        print(Semi_Major)
-        print(Craft1_Kep_Elements[2])
+        Craft1_Orb_Offset_Vect=-1*  np.sqrt((Semi_Major)**2 - (Semi_Minor)**2)     *(Craft1_e_vec)
 
         Craft1_Rel_Orb = extrusion(
             path  =[vec(0, 0, 0),vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])],
             shape =[shapes.ellipse(
                 width=Semi_Major,
                 height=Semi_Minor), shapes.ellipse(
-                width=Semi_Major * .98,
-                height=Semi_Minor * .98)],
+                width=Semi_Major * .985,
+                height=Semi_Minor * .985)],
             pos   =vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
                     State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
             color=color.white)
-        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2],
+        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
                               axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
                               origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
-
-        # TESTELLISPSE = extrusion(
-        #     path=[vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),
-        #           vec(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]+1000)],
-        #     shape=[shapes.ellipse(width=Semi_Minor, height=Semi_Major),
-        #            shapes.ellipse(width=Semi_Minor * .97, height= Semi_Major * .97)],
-        #     pos=vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
-        #             State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
-        #     axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]))
-        # TESTELLISPSE.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
-        #                       origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
-        #Craft_Rel_Orb = ring(pos=vector(State_Store[0, 0, 0]+Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0]+Craft1_Orb_Offset_Vect[1], State_Store[0, 2, 0]+Craft1_Orb_Offset_Vect[2]),axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2]),size=vector(100e3,Semi_Minor*2,Semi_Major*2))
-        #Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[2], axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
-        #axis=vector(Craft1_H[0], Craft1_H[1], Craft1_H[2])
-        #TEST_RING = ring(pos=vector(0,0,0),size=vector(200e3,6378e3*2,6378e3*3))
-        #TEST_RING2 = ring(pos=vector(0, 0, 0),size=vector(200e3, Craft1_Kep_Elements[0]*np.sqrt(1-.25**2), 46000e3),)
-
 
         #BOOTING UP THE SPHERES OF INFLUENCE
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
@@ -558,7 +538,48 @@ while True:
             if running:
                 rate(playrate.value)
                 CRAFT1.pos        = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                Craft1_Rel_Orb.pos= vector(State_Store[0, 0, k]+ Craft1_Orb_Offset_Vect[0], State_Store[0, 1, k]+ Craft1_Orb_Offset_Vect[1], State_Store[0, 2, k]+ Craft1_Orb_Offset_Vect[2])
+                #This is creating the dynamically updating relative orbit for the craft.
+                Craft1_Rel_Orb.visible=False
+                del Craft1_Rel_Orb
+                Craft1_H = Get_Angular(State_Store_wrt_Earth[2, 0:3, k], State_Store_wrt_Earth[2, 3:, k])
+                Craft1_H = Craft1_H / np.linalg.norm(Craft1_H)
+                Craft1_Kep_Elements, Craft1_e_vec = Inert_Kep(State_Store_wrt_Earth[2, :, k], C.C["Earth"]["Mu"])
+                Semi_Major = float(Craft1_Kep_Elements[0])
+                Semi_Minor = float(Craft1_Kep_Elements[0] * np.sqrt(1 - Craft1_Kep_Elements[1] ** 2))
+                Craft1_Rad_Peri = Craft1_Kep_Elements[0] * (1 - Craft1_Kep_Elements[1])
+                Craft1_e_vec = Craft1_e_vec / np.linalg.norm(Craft1_e_vec)
+                Craft1_Orb_Offset_Vect = -1 * np.sqrt((Semi_Major) ** 2 - (Semi_Minor) ** 2) * (Craft1_e_vec)
+                #Craft1_Rel_Orb.path=[vec(0, 0, 0), vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])]
+                print(k,Semi_Major,Semi_Minor)
+                Craft1_Rel_Orb = extrusion(
+                    path=[vec(0, 0, 0), vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])],
+                    shape=[shapes.ellipse(
+                        width=Semi_Major,
+                        height=Semi_Minor), shapes.ellipse(
+                        width=Semi_Major * .985,
+                        height=Semi_Minor * .985)],
+                    pos=vec(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
+                            State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
+                            State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2]),
+                    color=color.white)
+                Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
+                                      axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
+                                      origin=vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k]))
+                Craft1_Rel_Orb.pos = vector(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
+                                            State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
+                                            State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2])
+                # Craft1_Rel_Orb.shape=[shapes.ellipse(
+                #         width=Semi_Major,
+                #         height=Semi_Minor), shapes.ellipse(
+                #         width=Semi_Major * .985,
+                #         height=Semi_Minor * .985)]
+                # Craft1_Rel_Orb.pos=vec(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
+                #             State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
+                #             State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2])
+                # Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
+                #                       axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
+                #                       origin=vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k]))
+
                 MOON.pos          = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 ROI_MOON.pos      = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 EARTH.pos         = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
@@ -572,11 +593,11 @@ while True:
                                                    State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
                                                    State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
                                                    State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
-                                                   np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,:3, k]),
+                                                   np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,:3, k]),
                                                    State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
                                                    State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
                                                    State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k],
-                                                   np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,3:, k])))
+                                                   np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,3:, k])))
                 # elif valnum==1:
                 #     scene.caption=(str_format.format(k,labels[valnum],
                 #                                        State_Store[valnum, 0, k],State_Store_wrt_Moon[valnum, 0, k],

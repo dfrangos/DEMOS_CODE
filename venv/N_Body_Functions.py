@@ -64,8 +64,8 @@ def Create_Earth_Moon_System(N):
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 100  # Defining Softening factor
     mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],C.C["Craft1"]["Mass"]]])  #if you activate this it'll let you have the first body be any particular value you want.
-    Craft1_State_Vector=Kep_Inert(37000e3+6378e3,.6,.1,0,0,np.pi/3,C.C["Earth"]["Mu"])
-    state = np.array([[0, 0, 0, 0, 0, 0],[3.26102982e+08, 1.69424827e+08, -3.24537602e+07, -454.81023569, 957.4095185, -21.92975525],Craft1_State_Vector])
+    Craft1_State_Vector=Kep_Inert(600e3+6378e3,.03,0.43379,0,0,np.pi/3,C.C["Earth"]["Mu"])
+    state = np.array([[0, 0, 0, 0, 0, 0],[-3.69440870e8,1.76618191e7,4.36590499e7,-7.54317585e1,-9.60975084e2,-4.28095849e2],Craft1_State_Vector])
     #state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
@@ -352,12 +352,13 @@ def Inert_Kep(state_vec,mu):
     w=np.arccos(np.dot(n_vec,e_vec) / (n*e))
     if e_vec[2]<0:
         w=2*np.pi-w
+
     M=E-e*np.sin(E)
     a=1/ (   (2/np.linalg.norm(r_ijk) ) - ( (np.linalg.norm(v_ijk)**2)/mu  ) )
 
-    return [a,e,w,ran,i,f,M,E],e_vec
+    return [a,e,i,w,ran,f,M,E],e_vec
 
-def Kep_Inert(a,e,i,ran,w,theta,mu):
+def Kep_Inert(a,e,i,w,ran,theta,mu):
     # Defining Semilatus Rectum
     p = a * (1 - (e ** 2))
 
