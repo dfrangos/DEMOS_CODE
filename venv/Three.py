@@ -369,15 +369,15 @@ while True:
             t = int(lines[4])
             DT = float(lines[5])
         File.close()
-        t = 2000  # How many iterations
-        DT = 60  # Your delta T jumps
+        t = 4000  # How many iterations
+        DT = 200  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=50
+        Burn_Index=200
         Burn_Index_2=5490
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
@@ -437,9 +437,6 @@ while True:
 
         # VPTHON Section
         # ____________________________
-        #L = 500
-        #scene.range = L
-        #scene.forward = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
         running = True
         #This function binds the action of the pause button that will be defined in the future
         def Run(b):
@@ -450,12 +447,11 @@ while True:
             else:
                 b.text = "Run"
 
-
         button(text="Pause", pos=scene.title_anchor, bind=Run)
 
         #This function creates the menu that will be used to select which object you want to snap the view to.
         valnum=0
-        def Menu(m):
+        def View_Menu(m):
             val=m.selected
             global valnum
             if val=="Earth":
@@ -467,17 +463,19 @@ while True:
             elif val=="Craft1":
                 scene.camera.follow(CRAFT1)
                 valnum = 2
+            elif val==m.selected:
+
+
 
         labels = ["Earth", "Moon", "Craft1"]
-        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=Menu, right=30, pos=scene.title_anchor)
+        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=View_Menu(), right=30, pos=scene.title_anchor)
 
 
         # This function creates the slide bar that will allow the user to change the rate at which the animation is played.
         def setspeed(s):
             wt.text = '{:1.2f}'.format(s.value)
 
-
-        playrate = slider(min=1, max=1000, value=1, length=520, bind=setspeed, right=15, pos=scene.title_anchor)
+        playrate = slider(min=1, max=1000, value=10, length=600, bind=setspeed, right=15, pos=scene.title_anchor)
         wt = wtext(text='{:1.2f}'.format(playrate.value),pos=scene.title_anchor)
 
         str_format = '''Time: {:.1f} JD
@@ -492,103 +490,58 @@ while True:
                         VY: {:.2f} m/s           VY: {:.2f} m/s
                         VZ: {:.2f} m/s           VZ: {:.2f} m/s
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
-
-        CRAFT1   = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=1400, shininess=0.1)
-        MOON     = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=C.C["Moon"]["Radius"],   make_trail=True,   trail_type='curve', interval=30, retain=70, shininess=0.1, texture={'file':"\Images\Moon.jpg"})
-        EARTH    = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), radius=C.C["Earth"]["Radius"],  make_trail=True,   trail_type='curve', interval=30, retain=60, shininess=.1, texture={'file':"\Images\Earth.jpg"})
-        C1label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1', xoffset=10, height=10, color=color.green)
-        C2label  = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft2',xoffset=10, height=10, color=color.blue)
-        Mlabel   = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',   xoffset=10, height=10, color=color.white)
-        Elabel   = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
-
-        Craft1_H  = Get_Angular(State_Store_wrt_Earth[2,0:3,0],State_Store_wrt_Earth[2,3:,0])
-        Craft1_H  = Craft1_H/np.linalg.norm(Craft1_H)
-        Craft1_Kep_Elements, Craft1_e_vec=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
-        Semi_Major=float(Craft1_Kep_Elements[0])
-        Semi_Minor=float(Craft1_Kep_Elements[0]*np.sqrt(1-Craft1_Kep_Elements[1]**2))
-        Craft1_Rad_Peri= Craft1_Kep_Elements[0]*(1-Craft1_Kep_Elements[1])
-        Craft1_e_vec=Craft1_e_vec/np.linalg.norm(Craft1_e_vec)
-        Craft1_Orb_Offset_Vect=-1*  np.sqrt((Semi_Major)**2 - (Semi_Minor)**2)     *(Craft1_e_vec)
-
-        Craft1_Rel_Orb = extrusion(
-            path  =[vec(0, 0, 0),vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])],
-            shape =[shapes.ellipse(
-                width=Semi_Major,
-                height=Semi_Minor), shapes.ellipse(
-                width=Semi_Major * .985,
-                height=Semi_Minor * .985)],
-            pos   =vec(State_Store[0, 0, 0] + Craft1_Orb_Offset_Vect[0], State_Store[0, 1, 0] + Craft1_Orb_Offset_Vect[1],
-                    State_Store[0, 2, 0] + Craft1_Orb_Offset_Vect[2]),
-            color=color.white)
-        Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
-                              axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
-                              origin=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]))
-
+        # BOOTING UP THE BODIES.
+        #_______________________________________________________
+        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=60,shininess=.1, texture={'file': "\Images\Earth.jpg"})
+        MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=70,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
+        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=300, shininess=0.1)
+        # BOOTING UP THE LABELS.
+        #______________________________________________________
+        Elabel       = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
+        Mlabel       = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',xoffset=10, height=10, color=color.white)
+        C1label      = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1',xoffset=10, height=10, color=color.green)
+        # BOOTING UP THE RELATIVE ORBITS.
+        # ______________________________________________________
+        Craft1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=100e3, retain=60)
+        Craft1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
+        Craft1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=100e3, retain=60)
         #BOOTING UP THE SPHERES OF INFLUENCE
+        # ______________________________________________________
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
+
+        #SETTING UP THE INITIAL CAMERA CONDITIONS
         k=0
-        scene.forward=vector(0,0,1)
-        scene.up = vector(1,0,0)
-
-        scale = 1e-10 / 1e2
-        scene.range = 1000000
-        scene.fov = .0001
-
+        scene.forward    = vector(0,0,1)
+        scene.up         = vector(1,0,0)
+        scale            = 1e-10 / 1e2
+        scene.range      = 1000000
+        scene.fov        = .0001
+        scene.autoscale  = False
+        scene.width = 1400
+        scene.height = 00
+        #BEGINING THE ANIMATION
         while k < t:
             if running:
                 rate(playrate.value)
-                CRAFT1.pos        = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                #This is creating the dynamically updating relative orbit for the craft.
-                Craft1_Rel_Orb.visible=False
-                del Craft1_Rel_Orb
-                Craft1_H = Get_Angular(State_Store_wrt_Earth[2, 0:3, k], State_Store_wrt_Earth[2, 3:, k])
-                Craft1_H = Craft1_H / np.linalg.norm(Craft1_H)
-                Craft1_Kep_Elements, Craft1_e_vec = Inert_Kep(State_Store_wrt_Earth[2, :, k], C.C["Earth"]["Mu"])
-                Semi_Major = float(Craft1_Kep_Elements[0])
-                Semi_Minor = float(Craft1_Kep_Elements[0] * np.sqrt(1 - Craft1_Kep_Elements[1] ** 2))
-                Craft1_Rad_Peri = Craft1_Kep_Elements[0] * (1 - Craft1_Kep_Elements[1])
-                Craft1_e_vec = Craft1_e_vec / np.linalg.norm(Craft1_e_vec)
-                Craft1_Orb_Offset_Vect = -1 * np.sqrt((Semi_Major) ** 2 - (Semi_Minor) ** 2) * (Craft1_e_vec)
-                #Craft1_Rel_Orb.path=[vec(0, 0, 0), vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])]
-                print(k,Semi_Major,Semi_Minor)
-                Craft1_Rel_Orb = extrusion(
-                    path=[vec(0, 0, 0), vec(Craft1_H[0], Craft1_H[1], Craft1_H[2])],
-                    shape=[shapes.ellipse(
-                        width=Semi_Major,
-                        height=Semi_Minor), shapes.ellipse(
-                        width=Semi_Major * .985,
-                        height=Semi_Minor * .985)],
-                    pos=vec(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
-                            State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
-                            State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2]),
-                    color=color.white)
-                Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
-                                      axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
-                                      origin=vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k]))
-                Craft1_Rel_Orb.pos = vector(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
-                                            State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
-                                            State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2])
-                # Craft1_Rel_Orb.shape=[shapes.ellipse(
-                #         width=Semi_Major,
-                #         height=Semi_Minor), shapes.ellipse(
-                #         width=Semi_Major * .985,
-                #         height=Semi_Minor * .985)]
-                # Craft1_Rel_Orb.pos=vec(State_Store[0, 0, k] + Craft1_Orb_Offset_Vect[0],
-                #             State_Store[0, 1, k] + Craft1_Orb_Offset_Vect[1],
-                #             State_Store[0, 2, k] + Craft1_Orb_Offset_Vect[2])
-                # Craft1_Rel_Orb.rotate(angle=Craft1_Kep_Elements[3],
-                #                       axis=vec(Craft1_H[0], Craft1_H[1], Craft1_H[2]),
-                #                       origin=vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k]))
-
-                MOON.pos          = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                ROI_MOON.pos      = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                EARTH.pos         = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-                C1label.pos       = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                Mlabel.pos        = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
-                Elabel.pos        = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                # PROPAGATING THE BODIES.
+                # _______________________________________________________
+                EARTH.pos    = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                MOON.pos     = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                CRAFT1.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                # PROPAGATING THE BODIES.
+                # _______________________________________________________
+                Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                C1label.pos  = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
+                # PROPAGATING THE RELATIVE ORBITS.
+                # _______________________________________________________
+                Craft1_Rel_Orb.append(pos=vector(State_Store[2, 0, k],State_Store[2, 1, k],State_Store[2, 2, k]), radius=70e3, color=color.red)
+                # PROPAGATING THE SPHERES OF INFLUENCE.
+                # _______________________________________________________
+                ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
 
                 #Creating the text at the bottom.
-                #if valnum==0:
+                #if valnum==0
                 scene.caption=(str_format.format(k,labels[valnum],
                                                    State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
                                                    State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
