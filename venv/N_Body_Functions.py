@@ -381,6 +381,11 @@ def Get_Angular(r_ijk,v_ijk):
     h = np.cross(r_ijk, v_ijk)
     return h
 
+def Get_Period(a,M): #a is the semi major and M is the mass of the parent body.
+    T=(2*np.pi*(a**(3/2)))/(np.sqrt(G*M))
+    return T
+
+
 #Extra Functions________________________________________________________________________________________________________
 
 def Peri_Inert(r_pqw, v_pqw, ijkpqw):

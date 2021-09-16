@@ -360,17 +360,17 @@ while True:
 
         break
     elif event_series1 == "Earth-Moon System":
-        with open('User_Input_Custom.txt', 'r') as File:
+        with open('User_Input_Earth_Moon.txt', 'r') as File:
             lines = File.readlines()
-            N = int(lines[0])
+            N         = int(lines[0])
             Pos_Bound = float(lines[1])
             Vel_Bound = float(lines[2])
-            Mass = float(lines[3])
-            t = int(lines[4])
-            DT = float(lines[5])
+            Mass      = float(lines[3])
+            t         = int(lines[4])
+            DT        = float(lines[5])
         File.close()
-        t = 4000  # How many iterations
-        DT = 200  # Your delta T jumps
+        t = 3000  # How many iterations
+        DT = 400  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         # Defining my storage area for my position values
@@ -378,13 +378,13 @@ while True:
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
         Burn_Index=200
-        Burn_Index_2=5490
+        Burn_Index_2=400
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
             if k==Burn_Index:
                 Flag=[1,2,1.5e3,0,1]
             elif k==Burn_Index_2:
-                Flag=[0,2,.900e3,1,-1]
+                Flag=[1,2,.900e3,1,1]
             else:
                 Flag=[0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -437,6 +437,11 @@ while True:
 
         # VPTHON Section
         # ____________________________
+
+        Craft1_Orb_Elements_Ex,Craft1_e_Vec_Ex=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
+        Craft1_Major_Axis_Ex=float(Craft1_Orb_Elements_Ex[0])
+        Craft1_T_Ex=Get_Period(Craft1_Major_Axis_Ex,C.C["Earth"]["Mass"])
+
         running = True
         #This function binds the action of the pause button that will be defined in the future
         def Run(b):
@@ -463,12 +468,9 @@ while True:
             elif val=="Craft1":
                 scene.camera.follow(CRAFT1)
                 valnum = 2
-            elif val==m.selected:
-
-
 
         labels = ["Earth", "Moon", "Craft1"]
-        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=View_Menu(), right=30, pos=scene.title_anchor)
+        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=View_Menu, right=30, pos=scene.title_anchor)
 
 
         # This function creates the slide bar that will allow the user to change the rate at which the animation is played.
@@ -492,9 +494,9 @@ while True:
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
         # BOOTING UP THE BODIES.
         #_______________________________________________________
-        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=60,shininess=.1, texture={'file': "\Images\Earth.jpg"})
-        MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=70,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
-        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=300, shininess=0.1)
+        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
+        MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
+        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
         # BOOTING UP THE LABELS.
         #______________________________________________________
         Elabel       = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
@@ -502,12 +504,12 @@ while True:
         C1label      = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1',xoffset=10, height=10, color=color.green)
         # BOOTING UP THE RELATIVE ORBITS.
         # ______________________________________________________
-        Craft1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=100e3, retain=60)
-        Craft1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
-        Craft1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=100e3, retain=60)
+        CRAFT1_Rel_Orb        = curve()
+        CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
+        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=70e3, retain=(Craft1_T_Ex/DT)+1   )
         #BOOTING UP THE SPHERES OF INFLUENCE
         # ______________________________________________________
-        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.1)
+        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.08)
 
         #SETTING UP THE INITIAL CAMERA CONDITIONS
         k=0
@@ -518,10 +520,13 @@ while True:
         scene.fov        = .0001
         scene.autoscale  = False
         scene.width = 1400
-        scene.height = 00
+        scene.height = 700
         #BEGINING THE ANIMATION
         while k < t:
             if running:
+                Craft1_Orb_Elements_In, Craft1_e_Vec_In = Inert_Kep(State_Store_wrt_Earth[2, :, k], C.C["Earth"]["Mu"])
+                Craft1_Major_Axis_In = float(Craft1_Orb_Elements_In[0])
+                Craft1_T_In = Get_Period(Craft1_Major_Axis_In, C.C["Earth"]["Mass"])
                 rate(playrate.value)
                 # PROPAGATING THE BODIES.
                 # _______________________________________________________
@@ -535,7 +540,12 @@ while True:
                 C1label.pos  = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 # PROPAGATING THE RELATIVE ORBITS.
                 # _______________________________________________________
-                Craft1_Rel_Orb.append(pos=vector(State_Store[2, 0, k],State_Store[2, 1, k],State_Store[2, 2, k]), radius=70e3, color=color.red)
+                if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.005 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.995:
+                    Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
+                    CRAFT1_Rel_Orb.retain=(Craft1_T_In/DT)
+                CRAFT1_Rel_Orb.append(pos=vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k]),radius=120e3, color=color.red)
+                CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+
                 # PROPAGATING THE SPHERES OF INFLUENCE.
                 # _______________________________________________________
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
@@ -567,7 +577,6 @@ while True:
                 #                                        State_Store[valnum, 3, k],State_Store_wrt_Craft1[valnum, 3, k],
                 #                                        State_Store[valnum, 4, k],State_Store_wrt_Craft1[valnum, 4, k],
                 #                                        State_Store[valnum, 5, k],State_Store_wrt_Craft1[valnum, 5, k]))
-
                 k +=1
                 if k==t-1:
                     k=0
