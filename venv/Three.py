@@ -384,7 +384,7 @@ while True:
             if k==Burn_Index:
                 Flag=[1,2,1.5e3,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,.900e3,1,1]
+                Flag=[1,2,.700e3,1,1]
             else:
                 Flag=[0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -456,7 +456,8 @@ while True:
 
         #This function creates the menu that will be used to select which object you want to snap the view to.
         valnum=0
-        def View_Menu(m):
+
+        def Target_Menu(m):
             val=m.selected
             global valnum
             if val=="Earth":
@@ -468,9 +469,42 @@ while True:
             elif val=="Craft1":
                 scene.camera.follow(CRAFT1)
                 valnum = 2
+            if val == "Home":
+                scene.camera.center=vector(0,0,0)
+                #scene.camera.follow(None)
 
         labels = ["Earth", "Moon", "Craft1"]
-        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1'], bind=View_Menu, right=30, pos=scene.title_anchor)
+        menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1','Home'], bind=Target_Menu, right=30, pos=scene.title_anchor)
+
+        # This function creates the menu that will be used to select the parent body .
+        Parent_Num = 0
+        def Parent_Menu(m):
+            val = m.selected
+            global Parent_Num
+            if val == "Earth":
+                Parent_Num = 0
+            elif val == "Moon":
+                Parent_Num = 1
+            elif val == "Craft1":
+                Parent_Num = 2
+
+
+        menu(choices=['Choose a Parent Body', 'Earth', 'Moon', 'Craft1'], bind=Parent_Menu, right=90, pos=scene.title_anchor)
+
+        # This function creates the menu that will be used to select if the user wants to see relative or abs orbit trails
+        Trail_Flag = 2
+
+        def Orb_Menu(m):
+            val = m.selected
+            global Trail_Flag
+            if val == "Relative":
+                Trail_Flag = 0
+            elif val == "Absolute":
+                Trail_Flag = 1
+            elif val == "Both":
+                Trail_Flag = 2
+
+        menu(choices=['Choose a Trail Type', 'Relative', 'Absolute','Both'], bind=Orb_Menu, right=60, pos=scene.title_anchor)
 
 
         # This function creates the slide bar that will allow the user to change the rate at which the animation is played.
@@ -496,17 +530,17 @@ while True:
         #_______________________________________________________
         EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
         MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
-        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.green, make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
+        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.gray(0.5), make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
         # BOOTING UP THE LABELS.
         #______________________________________________________
         Elabel       = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
         Mlabel       = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',xoffset=10, height=10, color=color.white)
         C1label      = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1',xoffset=10, height=10, color=color.green)
         # BOOTING UP THE RELATIVE ORBITS.
+
         # ______________________________________________________
-        CRAFT1_Rel_Orb        = curve()
+        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1   )
         CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
-        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=70e3, retain=(Craft1_T_Ex/DT)+1   )
         #BOOTING UP THE SPHERES OF INFLUENCE
         # ______________________________________________________
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.08)
@@ -528,22 +562,34 @@ while True:
                 Craft1_Major_Axis_In = float(Craft1_Orb_Elements_In[0])
                 Craft1_T_In = Get_Period(Craft1_Major_Axis_In, C.C["Earth"]["Mass"])
                 rate(playrate.value)
+                if Trail_Flag==0:
+                    CRAFT1_Rel_Orb.visible=True
+                    CRAFT1.clear_trail()
+                    CRAFT1.make_trail=False
+                elif Trail_Flag==1:
+                    CRAFT1_Rel_Orb.visible = False
+                    CRAFT1_Rel_Orb.clear()
+                    CRAFT1.make_trail = True
+                elif Trail_Flag==2:
+                    CRAFT1_Rel_Orb.visible = True
+                    CRAFT1.make_trail = True
+
                 # PROPAGATING THE BODIES.
                 # _______________________________________________________
                 EARTH.pos    = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
                 MOON.pos     = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 CRAFT1.pos   = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                # PROPAGATING THE BODIES.
+                # PROPAGATING THE LABELS.
                 # _______________________________________________________
                 Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
                 Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 C1label.pos  = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 # PROPAGATING THE RELATIVE ORBITS.
                 # _______________________________________________________
-                if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.005 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.995:
+                if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.015 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.985:
                     Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
                     CRAFT1_Rel_Orb.retain=(Craft1_T_In/DT)
-                CRAFT1_Rel_Orb.append(pos=vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k]),radius=120e3, color=color.red)
+                CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Earth[2, 0, k], State_Store_wrt_Earth[2, 1, k], State_Store_wrt_Earth[2, 2, k]),radius=200e3, color=color.red)
                 CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
                 # PROPAGATING THE SPHERES OF INFLUENCE.
@@ -551,32 +597,40 @@ while True:
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
 
                 #Creating the text at the bottom.
-                #if valnum==0
-                scene.caption=(str_format.format(k,labels[valnum],
-                                                   State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
-                                                   State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
-                                                   State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
-                                                   np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,:3, k]),
-                                                   State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
-                                                   State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
-                                                   State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k],
-                                                   np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Moon[valnum,3:, k])))
-                # elif valnum==1:
-                #     scene.caption=(str_format.format(k,labels[valnum],
-                #                                        State_Store[valnum, 0, k],State_Store_wrt_Moon[valnum, 0, k],
-                #                                        State_Store[valnum, 1, k],State_Store_wrt_Moon[valnum, 1, k],
-                #                                        State_Store[valnum, 2, k],State_Store_wrt_Moon[valnum, 2, k],
-                #                                        State_Store[valnum, 3, k],State_Store_wrt_Moon[valnum, 3, k],
-                #                                        State_Store[valnum, 4, k],State_Store_wrt_Moon[valnum, 4, k],
-                #                                        State_Store[valnum, 5, k],State_Store_wrt_Moon[valnum, 5, k]))
-                # elif valnum==2:
-                #     scene.caption=(str_format.format(k,labels[valnum],
-                #                                        State_Store[valnum, 0, k],State_Store_wrt_Craft1[valnum, 0, k],
-                #                                        State_Store[valnum, 1, k],State_Store_wrt_Craft1[valnum, 1, k],
-                #                                        State_Store[valnum, 2, k],State_Store_wrt_Craft1[valnum, 2, k],
-                #                                        State_Store[valnum, 3, k],State_Store_wrt_Craft1[valnum, 3, k],
-                #                                        State_Store[valnum, 4, k],State_Store_wrt_Craft1[valnum, 4, k],
-                #                                        State_Store[valnum, 5, k],State_Store_wrt_Craft1[valnum, 5, k]))
+                if Parent_Num==0:
+                    scene.caption=(str_format.format(k,labels[valnum],
+                                                       State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
+                                                       State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
+                                                       State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
+                                                       np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,:3, k]),
+                                                       State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
+                                                       State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
+                                                       State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k],
+                                                       np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,3:, k])))
+                elif Parent_Num==1:
+                    scene.caption = (str_format.format(k, labels[valnum],
+                                                       State_Store[valnum, 0, k], State_Store_wrt_Moon[valnum, 0, k],
+                                                       State_Store[valnum, 1, k], State_Store_wrt_Moon[valnum, 1, k],
+                                                       State_Store[valnum, 2, k], State_Store_wrt_Moon[valnum, 2, k],
+                                                       np.linalg.norm(State_Store[valnum, :3, k]),
+                                                       np.linalg.norm(State_Store_wrt_Moon[valnum, :3, k]),
+                                                       State_Store[valnum, 3, k], State_Store_wrt_Moon[valnum, 3, k],
+                                                       State_Store[valnum, 4, k], State_Store_wrt_Moon[valnum, 4, k],
+                                                       State_Store[valnum, 5, k], State_Store_wrt_Moon[valnum, 5, k],
+                                                       np.linalg.norm(State_Store[valnum, 3:, k]),
+                                                       np.linalg.norm(State_Store_wrt_Moon[valnum, 3:, k])))
+                elif Parent_Num == 2:
+                    scene.caption = (str_format.format(k, labels[valnum],
+                                                       State_Store[valnum, 0, k], State_Store_wrt_Craft1[valnum, 0, k],
+                                                       State_Store[valnum, 1, k], State_Store_wrt_Craft1[valnum, 1, k],
+                                                       State_Store[valnum, 2, k], State_Store_wrt_Craft1[valnum, 2, k],
+                                                       np.linalg.norm(State_Store[valnum, :3, k]),
+                                                       np.linalg.norm(State_Store_wrt_Craft1[valnum, :3, k]),
+                                                       State_Store[valnum, 3, k], State_Store_wrt_Craft1[valnum, 3, k],
+                                                       State_Store[valnum, 4, k], State_Store_wrt_Craft1[valnum, 4, k],
+                                                       State_Store[valnum, 5, k], State_Store_wrt_Craft1[valnum, 5, k],
+                                                       np.linalg.norm(State_Store[valnum, 3:, k]),
+                                                       np.linalg.norm(State_Store_wrt_Craft1[valnum, 3:, k])))
                 k +=1
                 if k==t-1:
                     k=0
