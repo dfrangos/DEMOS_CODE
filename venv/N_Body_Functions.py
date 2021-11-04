@@ -64,9 +64,18 @@ def Create_Earth_Moon_System(N):
     mass = np.zeros((1, N))  # Creating an Empty Mass Vector (0,0,0,0....)
     soft = 100  # Defining Softening factor
     mass  = np.array([[C.C["Earth"]["Mass"],C.C["Moon"]["Mass"],C.C["Craft1"]["Mass"]]])  #if you activate this it'll let you have the first body be any particular value you want.
-    Craft1_State_Vector=Kep_Inert(600e3+6378e3,.03,0.43379,0,0,np.pi/3,C.C["Earth"]["Mu"])
-    state = np.array([[0, 0, 0, 0, 0, 0],[-3.69440870e8,1.76618191e7,4.36590499e7,-7.54317585e1,-9.60975084e2,-4.28095849e2],Craft1_State_Vector])
-    #state = np.array([[0,0,0,0,0,0],[3.26102982e+08,1.69424827e+08,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525],[3.26102982e+08*.72,1.69424827e+08*.65,-3.24537602e+07,-454.81023569,957.4095185,-21.92975525]])  #if you activate this it'll let you have the first body be any particular value you want.
+    Epoch1 = [1994, 4, 28, 12, 0, 0]
+    MD, JD1 = Julian_Date(Epoch1)
+    Moon_Position1, Radius_Moon_Mag1 = Moon_Position(JD1)
+    Epoch2 = [1994, 4, 28, 12, 0, 1]
+    MD, JD2 = Julian_Date(Epoch2)
+    Moon_Position2, Radius_Moon_Mag2 = Moon_Position(JD2)
+    Moon_Velocity=(Moon_Position2-Moon_Position1)
+    Moon_State_Vector=np.ndarray.tolist(np.hstack([Moon_Position1,Moon_Velocity]))
+    print(Moon_State_Vector)
+    Moon_Keplerian, e_vec_Moon = Inert_Kep(Moon_State_Vector, C.C["Earth"]["Mu"])
+    Craft1_State_Vector=Kep_Inert(3000e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/3,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
+    state = np.array([[0, 0, 0, 0, 0, 0],Moon_State_Vector,Craft1_State_Vector])
     return state, mass, soft
 
 def Create_TRAPIST_1(N):
@@ -105,7 +114,7 @@ def Get_Accel(N,state,mass,soft):
 def Update_State(n,state,accel,dt,mass,soft,flag):
 
 #Flag's Structure
-    burn_flag,target_body,dv_mag,origin_body,direction=flag
+    burn_flag,target_body,dv_mag,origin_body,normal_direction,velocity_direction=flag
 
     if flag[0]==0:
         for i in range(n):
@@ -114,17 +123,21 @@ def Update_State(n,state,accel,dt,mass,soft,flag):
             accel        = Get_Accel(n,state,mass,soft)
             state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
     elif flag[0]==1:
-        for i in range(n):
-            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
-            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
-            accel        = Get_Accel(n,state,mass,soft)
-            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
         relative_state         = state[target_body,:]-state[origin_body,:]
+        r_mag                  = np.linalg.norm(relative_state[:3])
+        r_unit                 = relative_state[:3]/r_mag
         v_mag                  = np.linalg.norm(relative_state[3:])
-        unit                   = relative_state[3:]/v_mag
-        dv_vec                 = unit*dv_mag*direction
-        relative_state[3:]    += dv_vec
+        v_unit                 = relative_state[3:] / v_mag
+        h_unit                 = np.cross(r_unit,v_unit)
+        dv_vec_unit            = (v_unit * velocity_direction + h_unit * normal_direction)/np.linalg.norm(v_unit * velocity_direction + h_unit * normal_direction)
+        relative_state[3:]    += dv_vec_unit*dv_mag
         state[target_body, 3:] = relative_state[3:]+state[origin_body,3:]
+
+        for i in range(n):
+            state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
+            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
+            accel = Get_Accel(n, state, mass, soft)
+            state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
     return state
 
 def Total_Energy(n, state, mass, index):
@@ -313,6 +326,68 @@ def Ephemeride_Coeff(Planet):
 
     return coeff
 
+def Moon_Position (JD):
+    T_ut1= (JD - 2451545.0) / 36525.0
+    T_TBD=T_ut1
+    #Calculating Lambda
+    Lambda_e = 218.32 + 481267.8813 * T_TBD + 6.29 * sind(134.9 + 477198.85 * T_TBD)\
+                -1.27*sind(259.2-413335.39*T_TBD)+.66*sind(235.7+890534.23*T_TBD)\
+                +.21*sind(269.9+954397.7*T_TBD)-.19*sind(357.5+35999.05*T_TBD)\
+                -.11*sind(186.6+966404.05*T_TBD)
+    #Lambda_e *= np.pi / 180
+    # Calculating Phi_e
+    Phi_e=5.13*sind(93.3+483202.03*T_TBD)+.28*sind(228.2+960400.87*T_TBD)
+    -.28*sind(318.3+6003.18*T_TBD)-.17*sind(217.6-407332.20*T_TBD)
+
+    #Phi_e*= np.pi / 180
+    # Calculating WOW
+    WOW=.9508+.0518*cosd(134.9+477198.85*T_TBD)
+    +.0095*cosd(259.2-413335.38*T_TBD)+.0078*cosd(235.7+890534.23*T_TBD)
+    +.0028*cosd(269.9+954397.7*T_TBD)
+    #WOW*= np.pi / 180
+    #Calcualating ep
+    ep = 23.439291 - .0130042 * T_TBD- 1.64e-7*T_TBD**2 + 5.04e-7*T_TBD**3
+
+    #ep *= np.pi / 180
+    #Calculating r_moon magnitude
+    r_moon_mag=(1/sind(WOW))*6378e3
+    # Calculating the position vector of the moon
+    r_moon=r_moon_mag*np.array([
+    cosd(Phi_e)*cosd(Lambda_e),
+    cosd(ep)*cosd(Phi_e)*sind(Lambda_e)-sind(ep)*sind(Phi_e),
+    sind(ep)*cosd(Phi_e)*sind(Lambda_e)+cosd(ep)*sind(Phi_e)
+    ])
+
+
+    return r_moon, r_moon_mag
+
+def Julian_Date (Timestamp):
+
+#Taking the values within Timestamp and assigning them names.
+    year, month, day, hour, minute, second=Timestamp
+#Calculating your Julian date using the timestamp inputs
+    JD= 367 * (year) - ( (7/4) * (year + ( (month+9) / 12) ) ) + ( (275 * month) / 9  ) + day + 1721013.5 + ( ( ( (second / 60) + minute) / 60 + hour )/24)
+
+#Doing a modified MJD because the normal value is very large
+    MJD=JD-2400000.5
+
+    return MJD,JD
+
+def Sun_Position (JD):
+
+    T_ut1= (JD-2451545.0)/36525
+    Lambda_M = 280.4606184 + 36000.77005361 * T_ut1
+    M=357.5277233+35999.05034* T_ut1
+    M*=np.pi/180
+    Lambda_e= Lambda_M + 1.914666471 * np.sin(M) + .019994643 * np.sin(2 * M)
+    Lambda_e*= np.pi / 180
+    r_mag= 1.000140612 - .016708617 * np.cos(M) - .000139589 * np.cos(2 * M)
+    ep = 23.439291 - .0130042 * T_ut1
+    ep*=np.pi/180
+    r= np.array([r_mag * np.cos(Lambda_e), r_mag * np.cos(ep) * np.sin(Lambda_e), r_mag * np.sin(ep) * np.sin(Lambda_e)]) * AU
+
+    return r
+
 #Auxillary Functions and Features_______________________________________________________________________________________
 
 def GET_SOI(M,m,a): #Returns the sphere of influence of the body in question
@@ -320,11 +395,11 @@ def GET_SOI(M,m,a): #Returns the sphere of influence of the body in question
     print(r_SOI)
     return r_SOI
 
-def Abs_Rel(n_origin,State_Store):
+def Abs_Rel(Parent_Body,State_Store):
     #n_origin is the N value of the parent body
     Relative_Store=np.zeros(State_Store.shape)
     for i in range(State_Store.shape[0]):
-        Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[n_origin,:,:]
+        Relative_Store[i,:,:]=State_Store[i,:,:]-State_Store[Parent_Body,:,:]
 
     return Relative_Store
 
@@ -385,6 +460,73 @@ def Get_Period(a,M): #a is the semi major and M is the mass of the parent body.
     T=(2*np.pi*(a**(3/2)))/(np.sqrt(G*M))
     return T
 
+def Parent_Body_Check(N_Craft,State_Store_wrt_Body1,State_Store_wrt_Body2,t,ROI_List): #N_Craft is the number of the craft in the relative store
+    Parent_Key_Store=np.zeros(t,1)
+    for i in range(t):
+        mag_0=np.linalg.norm(State_Store_wrt_Body1[N_Craft,:3, t])
+        mag_1=np.linalg.norm(State_Store_wrt_Body2[N_Craft,:3, t])
+        if mag_0<ROI_List[0] and mag_1>ROI_List[1]:
+            Parent_Key_Store[i]=0
+        elif mag_0<ROI_List[0] and mag_1<ROI_List[1]:
+            Parent_Key_Store[i]=1
+
+    return Parent_Key_Store
+
+def Transfer_Time(t,state_vec,State_Store_wrt_Body1,DT):
+    r_ijk = State_Store_wrt_Body1[2, :3, 1]
+    v_ijk = State_Store_wrt_Body1[2, 3:, 1]
+    h = np.cross(r_ijk, v_ijk)
+    h_mag=np.linalg.norm(h)
+    e_vec = (np.cross(v_ijk, h) / C.C["Earth"]["Mu"]) - r_ijk / (np.linalg.norm(r_ijk))
+    e = np.linalg.norm(e_vec)
+    R_1=((h_mag**2/C.C["Earth"]["Mu"])/(1+e*np.cos(0))) #Perigee Circular Alt of Spacecraft
+    R_2_Store = np.zeros((t,1))
+    T_Store=np.zeros((t,1))
+    for i in range(t):
+        R_2_Store[i] = np.linalg.norm(State_Store_wrt_Body1[1, :3, i])
+        a=(R_1+R_2_Store[i])/2
+        #T_Store[i]=((np.pi/np.sqrt(C.C["Earth"]["Mu"]))*(a**(3/2)))/(3600*24)
+        T_Store[i]=np.pi*np.sqrt((a**3)/(C.C["Earth"]["Mu"]))/(3600*24)
+
+    return R_1,R_2_Store,T_Store #transfer arc times with their respective true anomaly degree value. (deg,sec)
+
+def Delta_V(t,R_1,R_2_Store):
+    DV_1=np.zeros((t,1))
+    DV_2=np.zeros((t,1))
+    DV_Total=np.zeros((t,1))
+    for i in range(t):
+        DV_1[i]=np.sqrt(C.C["Earth"]["Mu"]/R_1)*(np.sqrt(2*R_2_Store[i]/(R_1+R_2_Store[i]))-1)
+        DV_2[i]=np.sqrt(C.C["Earth"]["Mu"]/R_2_Store[i])*(1-np.sqrt(2 * R_1/(R_1 + R_2_Store[i])))
+        DV_Total[i]=DV_1[i]+DV_2[i]
+    return DV_1,DV_2,DV_Total
+
+def Phasing(t,T_Store,State_Store_wrt_Body1,DT):
+    Moon_Phasing_Time = np.zeros((t, 1))
+    Mean_Store = np.zeros((t, 1))
+    trial= np.zeros((t, 1))
+    for i in range(t):
+        if int(i+(T_Store[i]*(3600*24))/DT)>=t:
+            Moon_Phasing_Time[i]= 0
+            trial[i] = np.linalg.norm(State_Store_wrt_Body1[1, :3, i])
+        else:
+            #Finding the Current Mean anomaly and time beyond Perigee
+            Orbital_Elements,e_vec=Inert_Kep(State_Store_wrt_Body1[1,:,i], C.C["Earth"]["Mu"])
+            T = (2 * np.pi * (Orbital_Elements[0] ** (3 / 2))) / (np.sqrt(G * C.C["Earth"]["Mass"]))
+            Mean_Anomaly_1=Orbital_Elements[6]
+            t0_1=Mean_Anomaly_1/((2*np.pi)/T)
+            # Finding the second Mean anomaly and time beyond Perigee for the rendzesvous point.
+            Orbital_Elements, e_vec = Inert_Kep(State_Store_wrt_Body1[1,:,i+int(T_Store[i]*(3600*24)/DT)], C.C["Earth"]["Mu"])
+            Mean_Anomaly_2 = Orbital_Elements[6]
+            t0_2 = Mean_Anomaly_2 / ((2 * np.pi) / T)
+            Moon_Phasing_Time[i]=(t0_2-t0_1)/(3600*24)
+            Mean_Store[i]=Mean_Anomaly_1#-Mean_Anomaly_1
+            #if Moon_Phasing_Time[i]<=0: #Somtimes the difference between these two values is negative because the moon is currently close to its perigee. This next protion of code will take the remaining timeperiod up to the perigee and then add t02 to accound for this.
+            #     Moon_Phasing_Time[i]=((T-t0_1)+t0_2)/(3600*24)
+            #     Moon_Phasing_Time[i] = abs(Moon_Phasing_Time[i])-T/(3600*24)
+            trial[i] = np.linalg.norm(State_Store_wrt_Body1[1, :3, i]) # This is just proving that for smoe reason the celestial bodies in our simulation are moving away from one another.
+
+    return Moon_Phasing_Time,trial,Mean_Store
+
 
 #Extra Functions________________________________________________________________________________________________________
 
@@ -410,6 +552,54 @@ def IJKPQW(i,ran,w):
     print(ijkpqw.shape)
     return ijkpqw
 
+def sind (x):
+    deg=np.sin(x*(np.pi/180.0))
+    return deg
+def cosd (x):
+    deg=np.cos(x*(np.pi/180.0))
+    return deg
 
+#Force Feeler Array________________________________________
+def Create_Force_Feeler_Array(N_Feeler,X_Bound,Y_Bound,Z_Bound):
+    state = np.zeros((N_Feeler, 3))  # Creating an Empty State Vector (x,y,z,vx,vy,vz), (0,0,0,0,0,0)
+    x=np.linspace(-X_Bound,X_Bound,int(np.ceil(N_Feeler**(1/3))))
+    y=np.linspace(-Y_Bound,Y_Bound,int(np.ceil(N_Feeler**(1/3))))
+    z=np.linspace(-Z_Bound,Z_Bound,int(np.ceil(N_Feeler**(1/3))))
+    state=[]
+    for i in range(len(x)):
+        for j in range(len(y)):
+            for k in range(len(z)):
+                state.append([x[i],y[j],z[k]])
 
+    return np.array(state)
 
+def Feel_Accel(feeler_array,State_Store,Mass):
+    soft     = 6378e3
+    t        =State_Store.shape[2]
+    n        =feeler_array.shape[0]
+    accel    =np.zeros((n,t))
+    threshold=.01
+    mask     =np.zeros((n,t))
+    for tt in range(t):
+        for i in range(n):
+            accel_vec=np.zeros((3,1))
+            for j in range(State_Store.shape[0]):
+                dx = feeler_array[i, 0] - State_Store[j, 0, tt]
+                dy = feeler_array[i, 1] - State_Store[j, 1, tt]
+                dz = feeler_array[i, 2] - State_Store[j, 2, tt]
+                dist=np.array([dx,dy,dz])
+                dist_mag=np.linalg.norm(np.array([dx,dy,dz,soft]))
+                dist_unit_vect=dist/dist_mag
+                accel_vec[:,0]+=((-G*Mass[0,j])/dist_mag**2)*dist_unit_vect
+            accel[i,tt]=np.linalg.norm(accel_vec)
+            if accel[i,tt]<=threshold:
+                mask[i,tt]=1
+
+    return accel, mask
+
+# lam_ecliptic = 218.32 + 481267.8813 * t_tdb + 6.29 * sind(134.9 + 477198.85 * t_tdb) - 1.27 * sind(259.2 - 413335.38 * t_tdb) + 0.66 * sind(235.7 + 890534.23 * t_tdb) + 0.21 * sind(269.9 + 954397.7 * t_tdb) - 0.19 * sind(357.5 + 35999.05 * t_tdb) - 0.11 * sind(186.6 + 966404.05 * t_tdb)
+#     phi_ecliptic = 5.13*sind(93.3 + 483202.03*t_tdb) + 0.28*sind(228.2 + 960400.87*t_tdb) - \
+#         0.28*sind(318.3 + 6003.18*t_tdb) - 0.17*sind(217.6 - 407332.2*t_tdb)
+#     horiz_paral = 0.9508 + 0.0518*cosd(134.9 + 477198.85*t_tdb) + 0.0095*cosd(259.2 - 413335.38*t_tdb) + \
+#         0.0078*cosd(235.7 + 890534.23*t_tdb) + 0.0028*cosd(269.9 + 954397.7*t_tdb)
+#     eclip_bar = 23.439291 - 0.0130042*t_tdb - 1.64e-7*t_tdb**2 + 5.04e-7*t_tdb**3

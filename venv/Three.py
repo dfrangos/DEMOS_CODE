@@ -369,76 +369,119 @@ while True:
             t         = int(lines[4])
             DT        = float(lines[5])
         File.close()
-        t = 3000  # How many iterations
-        DT = 400  # Your delta T jumps
+        t = 10000  # How many iterations
+        DT = 230  # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
+        ROI_Earth= GET_SOI(C.C["Sun"]["Mass"], C.C["Earth"]["Mass"], 149.60e9)
+        ROI_List=np.array([ROI_Earth,ROI_Moon])
+
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=200
-        Burn_Index_2=400
+        Burn_Index=7320
+        Burn_Index_2=0
         for k in range(t):
-            #Structure for flag: burn_flag, target_body, dv_mag, origin_body, direction, time
+            #Structure for flag: burn_flag, target_body, dv_mag, origin_body, normal_direction,velocity_direction
             if k==Burn_Index:
-                Flag=[1,2,1.5e3,0,1]
+                Flag=[0,2,3350,0,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,.700e3,1,1]
+                Flag=[0,2,.700e3,1,1,0]
             else:
-                Flag=[0,0,0,0,0]
+                Flag=[0,0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
             State_Store[:, :, k] = State[:, 0:]
             # Saving the State Store Information to a File
-            while Save_to_File == "On":
-                write_to_file = True
-                filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
-                if write_to_file:
-                    with open(filename, 'wb') as f:
-                        np.save(f, State_Store)
+        while Save_to_File == "On":
+            write_to_file = True
+            filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
+            if write_to_file:
+                with open(filename, 'wb') as f:
+                    np.save(f, State_Store)
 
-        # This is the animation stuff______________________________
+
+        # MATPLOTLIB ANIMATION____DO NOT DELETE__________________________
         # ANIMATION FUNCTION
         # ___________________________________________________________________________
 
-        fig1 = plt.figure()
-        ax1 = Axes3D(fig1, auto_add_to_figure=False)
-        fig1.add_axes(ax1)
+        # fig1 = plt.figure()
+        # ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        # fig1.add_axes(ax1)
+        #
+        # def func(num, dataSet, line, N):
+        #     # NOTE: there is no .set_data() for 3 dim data...
+        #     for i in range(N):
+        #         line[i].set_data(dataSet[i, 0:2, :num])
+        #         line[i].set_3d_properties(dataSet[i, 2, :num])
+        #     set_axes_equal(ax1)
+        #     return line
+        #
+        #
+        # line = []
+        # ax1.scatter(Feeler_Positions[:, 0], Feeler_Positions[:, 1], Feeler_Positions[:, 2])
+        # for i in range(N):
+        #     line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+        # anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+
+        # # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        # ax1.set_xlabel("x (m)")
+        # ax1.set_ylabel("y (m)")
+        # ax1.set_zlabel("z (m)")
+        # ax1.set_title("Orbital Trjectory")
+        # ax1.grid()
+        # ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        # plt.show()
 
 
-        def func(num, dataSet, line, N):
-            # NOTE: there is no .set_data() for 3 dim data...
-            for i in range(N):
-                line[i].set_data(dataSet[i, 0:2, :num])
-                line[i].set_3d_properties(dataSet[i, 2, :num])
-            set_axes_equal(ax1)
-            return line
+        State_Store_wrt_Body1  = Abs_Rel(0, State_Store)
+        State_Store_wrt_Body2   = Abs_Rel(1, State_Store)
+        State_Store_wrt_Body3 = Abs_Rel(2, State_Store)
+
+        #Begining the Phaseing Plots
+        #_________________________________________
+        x=np.zeros((t,1))
+        for i in range(t):
+            x[i]=i
+        time=np.linspace(0,t,t)
+        R_1,R_2_Store,T_Store = Transfer_Time(t, State_Store[2,0:5,1], State_Store_wrt_Body1,DT)
+        DV_1,DV_2,DV_Total=Delta_V(t,R_1,R_2_Store)
+        Moon_Phasing_Time,trial,Mean_Store=Phasing(t,T_Store,State_Store_wrt_Body1,DT)
+        fig2,ax2 = plt.subplots()
+        ax2.set_title("Transfer Time in Seconds vs t Value in Simulation")
+
+        ax2.set_xlabel("t Value of Simulation")
+        ax2.set_ylabel("Transfer Duration Days",color='tab:red')
+        ax2.tick_params(axis='y',labelcolor='tab:red')
+        ax2.plot(x, T_Store,"r")
+        #ax2.plot(x, Moon_Phasing_Time, "k")
+
+        # ax_sub=ax2.twinx()
+        # ax_sub.set_ylabel("Delta V Req (m/s)",color='tab:blue')
+        # ax_sub.tick_params(axis='y', labelcolor='tab:blue')
+        # ax_sub.plot(x,DV_Total,'b')
+
+        ax_sub2 = ax2.twinx()
+        ax_sub2.set_ylabel("Phase Timing (Days)")
+        ax_sub2.plot(x,Mean_Store,"k")
+
+        # ax_sub3 = ax2.twinx()
+        # ax_sub3.set_ylabel("Lunar Dist to Earth (m)")
+        # ax_sub3.plot(x,trial, "k")
 
 
-        line = []
-
-        for i in range(N):
-            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
-
-        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
-        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
-        ax1.set_xlabel("x (m)")
-        ax1.set_ylabel("y (m)")
-        ax1.set_zlabel("z (m)")
-        ax1.set_title("Orbital Trjectory")
-        ax1.grid()
-        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        ax2.grid(axis='x')
+        ax2.grid(axis='y')
+        ax2.legend(["Transfer Times", "DV Req to Circularize", "Phase Timing"])
+        #ax_sub.legend(["DV Req to Circularize"])
+        fig2.tight_layout()
         plt.show()
-
-
-        State_Store_wrt_Earth  = Abs_Rel(0, State_Store)
-        State_Store_wrt_Moon   = Abs_Rel(1, State_Store)
-        State_Store_wrt_Craft1 = Abs_Rel(2, State_Store)
+        # _________________________________________
 
         # VPTHON Section
         # ____________________________
 
-        Craft1_Orb_Elements_Ex,Craft1_e_Vec_Ex=Inert_Kep(State_Store_wrt_Earth[2,:,0],C.C["Earth"]["Mu"])
+        Craft1_Orb_Elements_Ex,Craft1_e_Vec_Ex=Inert_Kep(State_Store_wrt_Body1[2,:,0],C.C["Earth"]["Mu"])
         Craft1_Major_Axis_Ex=float(Craft1_Orb_Elements_Ex[0])
         Craft1_T_Ex=Get_Period(Craft1_Major_Axis_Ex,C.C["Earth"]["Mass"])
 
@@ -528,7 +571,7 @@ while True:
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
         # BOOTING UP THE BODIES.
         #_______________________________________________________
-        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
+        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"]/10, make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
         MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
         CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.gray(0.5), make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
         # BOOTING UP THE LABELS.
@@ -537,13 +580,18 @@ while True:
         Mlabel       = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',xoffset=10, height=10, color=color.white)
         C1label      = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1',xoffset=10, height=10, color=color.green)
         # BOOTING UP THE RELATIVE ORBITS.
-
         # ______________________________________________________
-        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Earth[2, 0, 0], State_Store_wrt_Earth[2, 1, 0], State_Store_wrt_Earth[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1   )
+        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1   )
         CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
         #BOOTING UP THE SPHERES OF INFLUENCE
         # ______________________________________________________
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.08)
+
+        # #BOOTING UP THE FORCE FEELER ARRAY
+        # FFA=[]
+        # for i in range(Feeler_Positions.shape[0]):
+        #     F=sphere(pos=vector(Feeler_Positions[i,0],Feeler_Positions[i,1],Feeler_Positions[i,2]),radius=C.C["Moon"]["Radius"]/5, make_trail=False, shininess=.1)
+        #     FFA.append(F)
 
         #SETTING UP THE INITIAL CAMERA CONDITIONS
         k=0
@@ -555,10 +603,11 @@ while True:
         scene.autoscale  = False
         scene.width = 1400
         scene.height = 700
+
         #BEGINING THE ANIMATION
         while k < t:
             if running:
-                Craft1_Orb_Elements_In, Craft1_e_Vec_In = Inert_Kep(State_Store_wrt_Earth[2, :, k], C.C["Earth"]["Mu"])
+                Craft1_Orb_Elements_In, Craft1_e_Vec_In = Inert_Kep(State_Store_wrt_Body1[2, :, k], C.C["Earth"]["Mu"])
                 Craft1_Major_Axis_In = float(Craft1_Orb_Elements_In[0])
                 Craft1_T_In = Get_Period(Craft1_Major_Axis_In, C.C["Earth"]["Mass"])
                 rate(playrate.value)
@@ -589,7 +638,7 @@ while True:
                 if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.015 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.985:
                     Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
                     CRAFT1_Rel_Orb.retain=(Craft1_T_In/DT)
-                CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Earth[2, 0, k], State_Store_wrt_Earth[2, 1, k], State_Store_wrt_Earth[2, 2, k]),radius=200e3, color=color.red)
+                CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k], State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
                 CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
 
                 # PROPAGATING THE SPHERES OF INFLUENCE.
@@ -599,42 +648,43 @@ while True:
                 #Creating the text at the bottom.
                 if Parent_Num==0:
                     scene.caption=(str_format.format(k,labels[valnum],
-                                                       State_Store[valnum, 0, k],State_Store_wrt_Earth[valnum, 0, k],
-                                                       State_Store[valnum, 1, k],State_Store_wrt_Earth[valnum, 1, k],
-                                                       State_Store[valnum, 2, k],State_Store_wrt_Earth[valnum, 2, k],
-                                                       np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,:3, k]),
-                                                       State_Store[valnum, 3, k],State_Store_wrt_Earth[valnum, 3, k],
-                                                       State_Store[valnum, 4, k],State_Store_wrt_Earth[valnum, 4, k],
-                                                       State_Store[valnum, 5, k],State_Store_wrt_Earth[valnum, 5, k],
-                                                       np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Earth[valnum,3:, k])))
+                                                       State_Store[valnum, 0, k],State_Store_wrt_Body1[valnum, 0, k],
+                                                       State_Store[valnum, 1, k],State_Store_wrt_Body1[valnum, 1, k],
+                                                       State_Store[valnum, 2, k],State_Store_wrt_Body1[valnum, 2, k],
+                                                       np.linalg.norm(State_Store[valnum,:3, k]), np.linalg.norm(State_Store_wrt_Body1[valnum,:3, k]),
+                                                       State_Store[valnum, 3, k],State_Store_wrt_Body1[valnum, 3, k],
+                                                       State_Store[valnum, 4, k],State_Store_wrt_Body1[valnum, 4, k],
+                                                       State_Store[valnum, 5, k],State_Store_wrt_Body1[valnum, 5, k],
+                                                       np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Body1[valnum,3:, k])))
                 elif Parent_Num==1:
                     scene.caption = (str_format.format(k, labels[valnum],
-                                                       State_Store[valnum, 0, k], State_Store_wrt_Moon[valnum, 0, k],
-                                                       State_Store[valnum, 1, k], State_Store_wrt_Moon[valnum, 1, k],
-                                                       State_Store[valnum, 2, k], State_Store_wrt_Moon[valnum, 2, k],
+                                                       State_Store[valnum, 0, k], State_Store_wrt_Body2[valnum, 0, k],
+                                                       State_Store[valnum, 1, k], State_Store_wrt_Body2[valnum, 1, k],
+                                                       State_Store[valnum, 2, k], State_Store_wrt_Body2[valnum, 2, k],
                                                        np.linalg.norm(State_Store[valnum, :3, k]),
-                                                       np.linalg.norm(State_Store_wrt_Moon[valnum, :3, k]),
-                                                       State_Store[valnum, 3, k], State_Store_wrt_Moon[valnum, 3, k],
-                                                       State_Store[valnum, 4, k], State_Store_wrt_Moon[valnum, 4, k],
-                                                       State_Store[valnum, 5, k], State_Store_wrt_Moon[valnum, 5, k],
+                                                       np.linalg.norm(State_Store_wrt_Body2[valnum, :3, k]),
+                                                       State_Store[valnum, 3, k], State_Store_wrt_Body2[valnum, 3, k],
+                                                       State_Store[valnum, 4, k], State_Store_wrt_Body2[valnum, 4, k],
+                                                       State_Store[valnum, 5, k], State_Store_wrt_Body2[valnum, 5, k],
                                                        np.linalg.norm(State_Store[valnum, 3:, k]),
-                                                       np.linalg.norm(State_Store_wrt_Moon[valnum, 3:, k])))
+                                                       np.linalg.norm(State_Store_wrt_Body2[valnum, 3:, k])))
                 elif Parent_Num == 2:
                     scene.caption = (str_format.format(k, labels[valnum],
-                                                       State_Store[valnum, 0, k], State_Store_wrt_Craft1[valnum, 0, k],
-                                                       State_Store[valnum, 1, k], State_Store_wrt_Craft1[valnum, 1, k],
-                                                       State_Store[valnum, 2, k], State_Store_wrt_Craft1[valnum, 2, k],
+                                                       State_Store[valnum, 0, k], State_Store_wrt_Body3[valnum, 0, k],
+                                                       State_Store[valnum, 1, k], State_Store_wrt_Body3[valnum, 1, k],
+                                                       State_Store[valnum, 2, k], State_Store_wrt_Body3[valnum, 2, k],
                                                        np.linalg.norm(State_Store[valnum, :3, k]),
-                                                       np.linalg.norm(State_Store_wrt_Craft1[valnum, :3, k]),
-                                                       State_Store[valnum, 3, k], State_Store_wrt_Craft1[valnum, 3, k],
-                                                       State_Store[valnum, 4, k], State_Store_wrt_Craft1[valnum, 4, k],
-                                                       State_Store[valnum, 5, k], State_Store_wrt_Craft1[valnum, 5, k],
+                                                       np.linalg.norm(State_Store_wrt_Body3[valnum, :3, k]),
+                                                       State_Store[valnum, 3, k], State_Store_wrt_Body3[valnum, 3, k],
+                                                       State_Store[valnum, 4, k], State_Store_wrt_Body3[valnum, 4, k],
+                                                       State_Store[valnum, 5, k], State_Store_wrt_Body3[valnum, 5, k],
                                                        np.linalg.norm(State_Store[valnum, 3:, k]),
-                                                       np.linalg.norm(State_Store_wrt_Craft1[valnum, 3:, k])))
+                                                       np.linalg.norm(State_Store_wrt_Body3[valnum, 3:, k])))
                 k +=1
                 if k==t-1:
                     k=0
         break
+
     elif event_series1 == "Martian System":
         t = 2000  # How many iterations
         DT = 20  # Your delta T jumps
