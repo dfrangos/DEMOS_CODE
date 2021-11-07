@@ -74,7 +74,7 @@ def Create_Earth_Moon_System(N):
     Moon_State_Vector=np.ndarray.tolist(np.hstack([Moon_Position1,Moon_Velocity]))
     print(Moon_State_Vector)
     Moon_Keplerian, e_vec_Moon = Inert_Kep(Moon_State_Vector, C.C["Earth"]["Mu"])
-    Craft1_State_Vector=Kep_Inert(3000e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/3,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
+    Craft1_State_Vector=Kep_Inert(38000e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/2,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
     state = np.array([[0, 0, 0, 0, 0, 0],Moon_State_Vector,Craft1_State_Vector])
     return state, mass, soft
 
@@ -118,10 +118,11 @@ def Update_State(n,state,accel,dt,mass,soft,flag):
 
     if flag[0]==0:
         for i in range(n):
-            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
+            accel = Get_Accel(n, state, mass, soft)
+            state[i, 3:] = state[i, 3:] + ((dt)*accel[i,:]) #Updating the velocity based on the acceleration
             state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
-            accel        = Get_Accel(n,state,mass,soft)
-            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
+            # accel        = Get_Accel(n,state,mass,soft)
+            # state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
     elif flag[0]==1:
         relative_state         = state[target_body,:]-state[origin_body,:]
         r_mag                  = np.linalg.norm(relative_state[:3])
@@ -134,10 +135,11 @@ def Update_State(n,state,accel,dt,mass,soft,flag):
         state[target_body, 3:] = relative_state[3:]+state[origin_body,3:]
 
         for i in range(n):
-            state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
-            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
             accel = Get_Accel(n, state, mass, soft)
-            state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
+            state[i, 3:] = state[i, 3:] + ((dt) * accel[i, :])  # Updating the velocity based on the acceleration
+            state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
+            # accel = Get_Accel(n, state, mass, soft)
+            # state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
     return state
 
 def Total_Energy(n, state, mass, index):
@@ -412,7 +414,7 @@ def Inert_Kep(state_vec,mu):
     r_ijk = state_vec[:3]
     v_ijk = state_vec[3:]
     h     = np.cross(r_ijk,v_ijk)
-    e_vec = (np.cross(v_ijk,h)/mu)-r_ijk/(np.linalg.norm(r_ijk))
+    e_vec = (np.cross(v_ijk,h)/C.C["Earth"]["Mu"])-r_ijk/(np.linalg.norm(r_ijk))
     e=np.linalg.norm(e_vec)
     n_vec=np.cross(np.array([0, 0, 1]), h)
     n=np.linalg.norm(n_vec)
@@ -420,7 +422,7 @@ def Inert_Kep(state_vec,mu):
     if np.dot(r_ijk,v_ijk)<0:
         f= 2 * np.pi - f
     i = np.arccos(h[2]/np.linalg.norm(h))
-    E=np.arctan2(np.tan(f / 2), np.sqrt((1 + e) / (1 - e)))
+    E=2*np.arctan2(np.tan(f / 2), np.sqrt((1 + e) / (1 - e)))
     ran=np.arccos(n_vec[0] / n)
     if n_vec[1]<0:
         ran=2*np.pi-ran
@@ -429,6 +431,12 @@ def Inert_Kep(state_vec,mu):
         w=2*np.pi-w
 
     M=E-e*np.sin(E)
+    if M<=0:
+        M=M+(2*np.pi)
+    if f<=0:
+        f=f+(2*np.pi)
+    if E<=0:
+        E=E+(2*np.pi)
     a=1/ (   (2/np.linalg.norm(r_ijk) ) - ( (np.linalg.norm(v_ijk)**2)/mu  ) )
 
     return [a,e,i,w,ran,f,M,E],e_vec
@@ -500,32 +508,22 @@ def Delta_V(t,R_1,R_2_Store):
         DV_Total[i]=DV_1[i]+DV_2[i]
     return DV_1,DV_2,DV_Total
 
-def Phasing(t,T_Store,State_Store_wrt_Body1,DT):
-    Moon_Phasing_Time = np.zeros((t, 1))
-    Mean_Store = np.zeros((t, 1))
-    trial= np.zeros((t, 1))
+def Phasing(t,T_Store,State_Store_wrt_Body1,DT): # The objective is to determine exactly when the differenace between the moons angle from an earth centered coordindate frame is (at the intercept time) exactly 180 degrees off of where the crafts current position is.
+    #Moons Angle
+    # Get the moons coord after predicted transfer time (neglect the z position)
+    Angle_Diff = np.zeros((t, 1))
     for i in range(t):
         if int(i+(T_Store[i]*(3600*24))/DT)>=t:
-            Moon_Phasing_Time[i]= 0
-            trial[i] = np.linalg.norm(State_Store_wrt_Body1[1, :3, i])
+            Angle_Diff[i]= 0
         else:
-            #Finding the Current Mean anomaly and time beyond Perigee
-            Orbital_Elements,e_vec=Inert_Kep(State_Store_wrt_Body1[1,:,i], C.C["Earth"]["Mu"])
-            T = (2 * np.pi * (Orbital_Elements[0] ** (3 / 2))) / (np.sqrt(G * C.C["Earth"]["Mass"]))
-            Mean_Anomaly_1=Orbital_Elements[6]
-            t0_1=Mean_Anomaly_1/((2*np.pi)/T)
-            # Finding the second Mean anomaly and time beyond Perigee for the rendzesvous point.
-            Orbital_Elements, e_vec = Inert_Kep(State_Store_wrt_Body1[1,:,i+int(T_Store[i]*(3600*24)/DT)], C.C["Earth"]["Mu"])
-            Mean_Anomaly_2 = Orbital_Elements[6]
-            t0_2 = Mean_Anomaly_2 / ((2 * np.pi) / T)
-            Moon_Phasing_Time[i]=(t0_2-t0_1)/(3600*24)
-            Mean_Store[i]=Mean_Anomaly_1#-Mean_Anomaly_1
-            #if Moon_Phasing_Time[i]<=0: #Somtimes the difference between these two values is negative because the moon is currently close to its perigee. This next protion of code will take the remaining timeperiod up to the perigee and then add t02 to accound for this.
-            #     Moon_Phasing_Time[i]=((T-t0_1)+t0_2)/(3600*24)
-            #     Moon_Phasing_Time[i] = abs(Moon_Phasing_Time[i])-T/(3600*24)
-            trial[i] = np.linalg.norm(State_Store_wrt_Body1[1, :3, i]) # This is just proving that for smoe reason the celestial bodies in our simulation are moving away from one another.
+            #Calculate its angle with repect to the earth reference frame.
+            Rvec_Moon_Intercept = State_Store_wrt_Body1[1, :3, i + int(T_Store[i] * (3600 * 24) / DT)]
+            # Calculate the crafts angle with repect to the earth reference frame.
+            Rvec_Craft_Current = State_Store_wrt_Body1[2, :3, i]
+            Angle_Diff[i]=np.arccos(np.dot(Rvec_Moon_Intercept,Rvec_Craft_Current)/(np.linalg.norm(Rvec_Moon_Intercept)*np.linalg.norm(Rvec_Craft_Current)))*180/np.pi
+            #Angle_Diff[i]=np.arctan2(np.linalg.norm(np.cross(Rvec_Moon_Intercept,Rvec_Craft_Current)), np.dot(Rvec_Moon_Intercept,Rvec_Craft_Current))*180/np.pi
 
-    return Moon_Phasing_Time,trial,Mean_Store
+    return Angle_Diff
 
 
 #Extra Functions________________________________________________________________________________________________________
@@ -597,9 +595,3 @@ def Feel_Accel(feeler_array,State_Store,Mass):
 
     return accel, mask
 
-# lam_ecliptic = 218.32 + 481267.8813 * t_tdb + 6.29 * sind(134.9 + 477198.85 * t_tdb) - 1.27 * sind(259.2 - 413335.38 * t_tdb) + 0.66 * sind(235.7 + 890534.23 * t_tdb) + 0.21 * sind(269.9 + 954397.7 * t_tdb) - 0.19 * sind(357.5 + 35999.05 * t_tdb) - 0.11 * sind(186.6 + 966404.05 * t_tdb)
-#     phi_ecliptic = 5.13*sind(93.3 + 483202.03*t_tdb) + 0.28*sind(228.2 + 960400.87*t_tdb) - \
-#         0.28*sind(318.3 + 6003.18*t_tdb) - 0.17*sind(217.6 - 407332.2*t_tdb)
-#     horiz_paral = 0.9508 + 0.0518*cosd(134.9 + 477198.85*t_tdb) + 0.0095*cosd(259.2 - 413335.38*t_tdb) + \
-#         0.0078*cosd(235.7 + 890534.23*t_tdb) + 0.0028*cosd(269.9 + 954397.7*t_tdb)
-#     eclip_bar = 23.439291 - 0.0130042*t_tdb - 1.64e-7*t_tdb**2 + 5.04e-7*t_tdb**3

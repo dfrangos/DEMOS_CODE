@@ -369,8 +369,8 @@ while True:
             t         = int(lines[4])
             DT        = float(lines[5])
         File.close()
-        t = 10000  # How many iterations
-        DT = 230  # Your delta T jumps
+        t = 15000  # How many iterations
+        DT = 210   # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         ROI_Earth= GET_SOI(C.C["Sun"]["Mass"], C.C["Earth"]["Mass"], 149.60e9)
@@ -380,14 +380,17 @@ while True:
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=7320
-        Burn_Index_2=0
+        Burn_Index=227
+        Burn_Index_2=2245
+        Burn_Index_3 = 2990
         for k in range(t):
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, normal_direction,velocity_direction
             if k==Burn_Index:
-                Flag=[0,2,3350,0,0,1]
+                Flag=[1,2,1008.5,0,0,1]
             elif k==Burn_Index_2:
-                Flag=[0,2,.700e3,1,1,0]
+                Flag=[1,2,350,1,0,-1]
+            elif k==Burn_Index_3:
+                Flag=[1,2,150,1,0,-1]
             else:
                 Flag=[0,0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -403,35 +406,34 @@ while True:
 
         # MATPLOTLIB ANIMATION____DO NOT DELETE__________________________
         # ANIMATION FUNCTION
-        # ___________________________________________________________________________
+        #___________________________________________________________________________
 
-        # fig1 = plt.figure()
-        # ax1 = Axes3D(fig1, auto_add_to_figure=False)
-        # fig1.add_axes(ax1)
-        #
-        # def func(num, dataSet, line, N):
-        #     # NOTE: there is no .set_data() for 3 dim data...
-        #     for i in range(N):
-        #         line[i].set_data(dataSet[i, 0:2, :num])
-        #         line[i].set_3d_properties(dataSet[i, 2, :num])
-        #     set_axes_equal(ax1)
-        #     return line
-        #
-        #
-        # line = []
-        # ax1.scatter(Feeler_Positions[:, 0], Feeler_Positions[:, 1], Feeler_Positions[:, 2])
-        # for i in range(N):
-        #     line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
-        # anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=1, fargs=(State_Store, line, N))
+        fig1 = plt.figure()
+        ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        fig1.add_axes(ax1)
 
-        # # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
-        # ax1.set_xlabel("x (m)")
-        # ax1.set_ylabel("y (m)")
-        # ax1.set_zlabel("z (m)")
-        # ax1.set_title("Orbital Trjectory")
-        # ax1.grid()
-        # ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
-        # plt.show()
+        def func(num, dataSet, line, N):
+            # NOTE: there is no .set_data() for 3 dim data...
+            for i in range(N):
+                line[i].set_data(dataSet[i, 0:2, :num])
+                line[i].set_3d_properties(dataSet[i, 2, :num])
+            set_axes_equal(ax1)
+            return line
+
+
+        line = []
+        for i in range(N):
+            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=.1, fargs=(State_Store, line, N))
+
+        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        ax1.set_xlabel("x (m)")
+        ax1.set_ylabel("y (m)")
+        ax1.set_zlabel("z (m)")
+        ax1.set_title("Orbital Trjectory")
+        ax1.grid()
+        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        plt.show()
 
 
         State_Store_wrt_Body1  = Abs_Rel(0, State_Store)
@@ -446,7 +448,7 @@ while True:
         time=np.linspace(0,t,t)
         R_1,R_2_Store,T_Store = Transfer_Time(t, State_Store[2,0:5,1], State_Store_wrt_Body1,DT)
         DV_1,DV_2,DV_Total=Delta_V(t,R_1,R_2_Store)
-        Moon_Phasing_Time,trial,Mean_Store=Phasing(t,T_Store,State_Store_wrt_Body1,DT)
+        Angle_Diff=Phasing(t,T_Store,State_Store_wrt_Body1,DT)
         fig2,ax2 = plt.subplots()
         ax2.set_title("Transfer Time in Seconds vs t Value in Simulation")
 
@@ -454,21 +456,15 @@ while True:
         ax2.set_ylabel("Transfer Duration Days",color='tab:red')
         ax2.tick_params(axis='y',labelcolor='tab:red')
         ax2.plot(x, T_Store,"r")
-        #ax2.plot(x, Moon_Phasing_Time, "k")
 
-        # ax_sub=ax2.twinx()
-        # ax_sub.set_ylabel("Delta V Req (m/s)",color='tab:blue')
-        # ax_sub.tick_params(axis='y', labelcolor='tab:blue')
-        # ax_sub.plot(x,DV_Total,'b')
+        ax_sub=ax2.twinx()
+        ax_sub.set_ylabel("Delta V Req (m/s)",color='tab:blue')
+        ax_sub.tick_params(axis='y', labelcolor='tab:blue')
+        ax_sub.plot(x,DV_1,'b')
 
-        ax_sub2 = ax2.twinx()
-        ax_sub2.set_ylabel("Phase Timing (Days)")
-        ax_sub2.plot(x,Mean_Store,"k")
-
-        # ax_sub3 = ax2.twinx()
-        # ax_sub3.set_ylabel("Lunar Dist to Earth (m)")
-        # ax_sub3.plot(x,trial, "k")
-
+        ax_sub3 = ax2.twinx()
+        ax_sub3.set_ylabel("Angle difference")
+        ax_sub3.plot(x,Angle_Diff, "k")
 
         ax2.grid(axis='x')
         ax2.grid(axis='y')
