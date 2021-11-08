@@ -369,7 +369,7 @@ while True:
             t         = int(lines[4])
             DT        = float(lines[5])
         File.close()
-        t = 15000  # How many iterations
+        t = 10000  # How many iterations
         DT = 210   # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
@@ -388,9 +388,9 @@ while True:
             if k==Burn_Index:
                 Flag=[1,2,1008.5,0,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,350,1,0,-1]
+                Flag=[1,2,390,1,0,-1]
             elif k==Burn_Index_3:
-                Flag=[1,2,150,1,0,-1]
+                Flag=[1,2,230,1,0,-1]
             else:
                 Flag=[0,0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -408,38 +408,37 @@ while True:
         # ANIMATION FUNCTION
         #___________________________________________________________________________
 
-        fig1 = plt.figure()
-        ax1 = Axes3D(fig1, auto_add_to_figure=False)
-        fig1.add_axes(ax1)
-
-        def func(num, dataSet, line, N):
-            # NOTE: there is no .set_data() for 3 dim data...
-            for i in range(N):
-                line[i].set_data(dataSet[i, 0:2, :num])
-                line[i].set_3d_properties(dataSet[i, 2, :num])
-            set_axes_equal(ax1)
-            return line
-
-
-        line = []
-        for i in range(N):
-            line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
-        anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=.1, fargs=(State_Store, line, N))
-
-        # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
-        ax1.set_xlabel("x (m)")
-        ax1.set_ylabel("y (m)")
-        ax1.set_zlabel("z (m)")
-        ax1.set_title("Orbital Trjectory")
-        ax1.grid()
-        ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
-        plt.show()
-
-
-        State_Store_wrt_Body1  = Abs_Rel(0, State_Store)
+        # fig1 = plt.figure()
+        # ax1 = Axes3D(fig1, auto_add_to_figure=False)
+        # fig1.add_axes(ax1)
+        #
+        # def func(num, dataSet, line, N):
+        #     # NOTE: there is no .set_data() for 3 dim data...
+        #     for i in range(N):
+        #         line[i].set_data(dataSet[i, 0:2, :num])
+        #         line[i].set_3d_properties(dataSet[i, 2, :num])
+        #     set_axes_equal(ax1)
+        #     return line
+        #
+        #
+        # line = []
+        # for i in range(N):
+        #     line.append(plt.plot(State_Store[i, 0, 0], State_Store[i, 1, 0], State_Store[i, 2, 0], marker=".")[0])
+        # anim = FuncAnimation(fig1, func, frames=t, repeat=True, interval=.1, fargs=(State_Store, line, N))
+        #
+        # # anim.save('rgb_cube.gif', dpi=80, writer='imagemagick', fps=24)
+        # ax1.set_xlabel("x (m)")
+        # ax1.set_ylabel("y (m)")
+        # ax1.set_zlabel("z (m)")
+        # ax1.set_title("Orbital Trjectory")
+        # ax1.grid()
+        # ax1.legend(["Body 1", "Body 2", "Body 3", "Body 4", "Body 5"])
+        # plt.show()
+        #____________________________________________________________________-
+        State_Store_wrt_Body1   = Abs_Rel(0, State_Store)
         State_Store_wrt_Body2   = Abs_Rel(1, State_Store)
-        State_Store_wrt_Body3 = Abs_Rel(2, State_Store)
-
+        State_Store_wrt_Body3   = Abs_Rel(2, State_Store)
+        Orbit_Flag_Store=Parent_Body_Check(State_Store_wrt_Body1,State_Store_wrt_Body2,t,ROI_List)
         #Begining the Phaseing Plots
         #_________________________________________
         x=np.zeros((t,1))
@@ -575,19 +574,24 @@ while True:
         Elabel       = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
         Mlabel       = label(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), text='Moon',xoffset=10, height=10, color=color.white)
         C1label      = label(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), text='Craft1',xoffset=10, height=10, color=color.green)
-        # BOOTING UP THE RELATIVE ORBITS.
+        # BOOTING UP THE STABLE ORBITS.
         # ______________________________________________________
-        CRAFT1_Rel_Orb        = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1   )
-        CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
+        CRAFT1_Rel_Orb             = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1)
+        CRAFT1_Rel_Orb.origin      = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
+
+        CRAFT1_Rel_Orb_Moon        = curve(vector(State_Store_wrt_Body2[2, 0, 0], State_Store_wrt_Body2[2, 1, 0], State_Store_wrt_Body2[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Rel_Orb_Moon.origin = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
+        # BOOTING UP THE HYPERBOLIC ORBITS.
+        # ______________________________________________________
+        CRAFT1_Ec_Orb_Earth        = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Ec_Orb_Earth.orign  = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
+
+        CRAFT1_Ec_Orb_Moon         = curve(vector(State_Store_wrt_Body2[2, 0, 0], State_Store_wrt_Body2[2, 1, 0], State_Store_wrt_Body2[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Ec_Orb_Moon.orign   = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
+
         #BOOTING UP THE SPHERES OF INFLUENCE
         # ______________________________________________________
-        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.08)
-
-        # #BOOTING UP THE FORCE FEELER ARRAY
-        # FFA=[]
-        # for i in range(Feeler_Positions.shape[0]):
-        #     F=sphere(pos=vector(Feeler_Positions[i,0],Feeler_Positions[i,1],Feeler_Positions[i,2]),radius=C.C["Moon"]["Radius"]/5, make_trail=False, shininess=.1)
-        #     FFA.append(F)
+        ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.07)
 
         #SETTING UP THE INITIAL CAMERA CONDITIONS
         k=0
@@ -609,14 +613,26 @@ while True:
                 rate(playrate.value)
                 if Trail_Flag==0:
                     CRAFT1_Rel_Orb.visible=True
+                    CRAFT1_Rel_Orb_Moon.visible = True
+                    CRAFT1_Ec_Orb_Earth.visible = True
+                    CRAFT1_Ec_Orb_Moon.visible = True
                     CRAFT1.clear_trail()
                     CRAFT1.make_trail=False
                 elif Trail_Flag==1:
                     CRAFT1_Rel_Orb.visible = False
+                    CRAFT1_Rel_Orb_Moon.visible = False
+                    CRAFT1_Ec_Orb_Earth.visible = False
+                    CRAFT1_Ec_Orb_Moon.visible = False
                     CRAFT1_Rel_Orb.clear()
+                    CRAFT1_Rel_Orb_Moon.clear()
+                    CRAFT1_Ec_Orb_Earth.clear()
+                    CRAFT1_Ec_Orb_Moon.clear()
                     CRAFT1.make_trail = True
                 elif Trail_Flag==2:
                     CRAFT1_Rel_Orb.visible = True
+                    CRAFT1_Rel_Orb_Moon.visible = True
+                    CRAFT1_Ec_Orb_Earth.visible = True
+                    CRAFT1_Ec_Orb_Moon.visible = True
                     CRAFT1.make_trail = True
 
                 # PROPAGATING THE BODIES.
@@ -629,13 +645,46 @@ while True:
                 Elabel.pos   = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
                 Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 C1label.pos  = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
-                # PROPAGATING THE RELATIVE ORBITS.
+                # PROPAGATING THE STABLE ORBITS.
                 # _______________________________________________________
-                if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.015 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.985:
-                    Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
-                    CRAFT1_Rel_Orb.retain=(Craft1_T_In/DT)
-                CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k], State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
-                CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                if Orbit_Flag_Store[k,0]==1 and Orbit_Flag_Store[k,1]==1:
+                    #This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
+                    if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.015 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.985:
+                        Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
+                        CRAFT1_Rel_Orb.retain=(Craft1_T_In/DT)
+                    CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k],
+                                                     State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
+                    CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                if Orbit_Flag_Store[k,0]==2 and Orbit_Flag_Store[k,1]==1:
+                    # This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
+                    #Its not here yet, havent wokre that out.
+                    CRAFT1_Rel_Orb_Moon.append(pos=vector(State_Store_wrt_Body2[2, 0, k], State_Store_wrt_Body2[2, 1, k],
+                                                     State_Store_wrt_Body2[2, 2, k]), radius=200e3, color=color.red)
+                    CRAFT1_Rel_Orb_Moon.origin = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                # PROPAGATING THE HYPERBOLIC ORBITS.
+                # _______________________________________________________
+                if Orbit_Flag_Store[k,0]==1 and Orbit_Flag_Store[k,1]==2:
+                    #This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
+                    # Its not here yet, havent wokre that out.
+                    CRAFT1_Ec_Orb_Earth.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k], State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
+                    CRAFT1_Ec_Orb_Earth.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                if Orbit_Flag_Store[k,0]==2 and Orbit_Flag_Store[k,1]==2:
+                    # This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
+                    #Its not here yet, havent wokre that out.
+                    CRAFT1_Ec_Orb_Moon.append(pos=vector(State_Store_wrt_Body2[2, 0, k], State_Store_wrt_Body2[2, 1, k],
+                                                     State_Store_wrt_Body2[2, 2, k]), radius=200e3, color=color.red)
+                    CRAFT1_Ec_Orb_Moon.origin = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                if Orbit_Flag_Store[k,0]==0:
+                    CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k],
+                                                     State_Store_wrt_Body1[2, 2, k]), radius=200e3, color=color.red)
+                    CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+
+
+
+
+
+
+
 
                 # PROPAGATING THE SPHERES OF INFLUENCE.
                 # _______________________________________________________

@@ -468,17 +468,51 @@ def Get_Period(a,M): #a is the semi major and M is the mass of the parent body.
     T=(2*np.pi*(a**(3/2)))/(np.sqrt(G*M))
     return T
 
-def Parent_Body_Check(N_Craft,State_Store_wrt_Body1,State_Store_wrt_Body2,t,ROI_List): #N_Craft is the number of the craft in the relative store
-    Parent_Key_Store=np.zeros(t,1)
-    for i in range(t):
-        mag_0=np.linalg.norm(State_Store_wrt_Body1[N_Craft,:3, t])
-        mag_1=np.linalg.norm(State_Store_wrt_Body2[N_Craft,:3, t])
+def Parent_Body_Check(State_Store_wrt_Body1,State_Store_wrt_Body2,t,ROI_List): #N_Craft is the number of the craft in the relative store
+    #First Column 0: The Craft has escaped every body in the system
+    #First Column 1: The Craft is within the SOI of the first body
+    #First Column 2: The Craft is within the SOI of the second body.
+    #Second Column 0: The Craft does not have an orbit around anything.
+    #Second COlumn 1: The Craft has a closed-stable Orbit.
+    #Second Column 2: The craft has an eccentric orbit.
+    Orbit_Flag_Store=np.zeros((t,2))
+    for i in range(t): #Creating the first Parameter which body is considered the parent body at that particular time step.
+        mag_0=np.linalg.norm(State_Store_wrt_Body1[2,:3, i])
+        mag_1=np.linalg.norm(State_Store_wrt_Body2[2,:3, i])
         if mag_0<ROI_List[0] and mag_1>ROI_List[1]:
-            Parent_Key_Store[i]=0
+            Orbit_Flag_Store[i,0]=1
         elif mag_0<ROI_List[0] and mag_1<ROI_List[1]:
-            Parent_Key_Store[i]=1
+            Orbit_Flag_Store[i,0]=2
+        else:
+            Orbit_Flag_Store[i,:] = 0
 
-    return Parent_Key_Store
+        #Now Creating the tool that will check the eccentricity with respect to the parent body.
+        if Orbit_Flag_Store[i,0]==1:
+            r_ijk = State_Store_wrt_Body1[2,:3, i]
+            v_ijk = State_Store_wrt_Body1[2,3:, i]
+            h = np.cross(r_ijk, v_ijk)
+            e_vec = (np.cross(v_ijk, h) / C.C["Earth"]["Mu"]) - r_ijk / (np.linalg.norm(r_ijk))
+            e = np.linalg.norm(e_vec)
+            if e<=1:
+                Orbit_Flag_Store[i, 1] = 1
+            elif e>=1:
+                Orbit_Flag_Store[i, 1] = 2
+            elif e<=0:
+                Orbit_Flag_Store[i, 1] = 0
+        if Orbit_Flag_Store[i,0]==2:
+            r_ijk = State_Store_wrt_Body2[2,:3, i]
+            v_ijk = State_Store_wrt_Body2[2,3:, i]
+            h = np.cross(r_ijk, v_ijk)
+            e_vec = (np.cross(v_ijk, h) / C.C["Moon"]["Mu"]) - r_ijk / (np.linalg.norm(r_ijk))
+            e = np.linalg.norm(e_vec)
+            if e<=1:
+                Orbit_Flag_Store[i, 1] = 1
+            elif e>=1:
+                Orbit_Flag_Store[i, 1] = 2
+            elif e <= 0:
+                Orbit_Flag_Store[i, 1] = 0
+
+    return Orbit_Flag_Store
 
 def Transfer_Time(t,state_vec,State_Store_wrt_Body1,DT):
     r_ijk = State_Store_wrt_Body1[2, :3, 1]
