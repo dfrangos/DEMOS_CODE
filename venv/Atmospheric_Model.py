@@ -5,7 +5,7 @@ r_Earth=6378e3
 def density(r):
     #The input r is the magnitude of your sat position vector in ECI (meters)
 
-    z=(r-r_Earth)*(1e-3)
+    z=(r-C.C["Earth"]["Radius"])*(1e-3)
 
     # base altitude (km) [h_0]
     h0 = [0, 25, 30, 40, 50, 60, 70,

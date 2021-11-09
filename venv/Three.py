@@ -369,8 +369,8 @@ while True:
             t         = int(lines[4])
             DT        = float(lines[5])
         File.close()
-        t = 10000  # How many iterations
-        DT = 210   # Your delta T jumps
+        t = 1200  # How many iterations
+        DT = 10   # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
         ROI_Earth= GET_SOI(C.C["Sun"]["Mass"], C.C["Earth"]["Mass"], 149.60e9)
@@ -380,17 +380,18 @@ while True:
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=227
-        Burn_Index_2=2245
+        Burn_Index=120
+        Burn_Index_2=220
         Burn_Index_3 = 2990
         for k in range(t):
+            DT = Update_DT(N,State)
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, normal_direction,velocity_direction
             if k==Burn_Index:
-                Flag=[1,2,1008.5,0,0,1]
+                Flag=[1,2,2808.5,0,0,1]
             elif k==Burn_Index_2:
-                Flag=[1,2,390,1,0,-1]
+                Flag=[0,2,1500,1,0,1]
             elif k==Burn_Index_3:
-                Flag=[1,2,230,1,0,-1]
+                Flag=[0,2,230,1,0,-1]
             else:
                 Flag=[0,0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
@@ -549,7 +550,7 @@ while True:
         def setspeed(s):
             wt.text = '{:1.2f}'.format(s.value)
 
-        playrate = slider(min=1, max=1000, value=10, length=600, bind=setspeed, right=15, pos=scene.title_anchor)
+        playrate = slider(min=1, max=700, value=10, length=600, bind=setspeed, right=15, pos=scene.title_anchor)
         wt = wtext(text='{:1.2f}'.format(playrate.value),pos=scene.title_anchor)
 
         str_format = '''Time: {:.1f} JD
@@ -566,7 +567,7 @@ while True:
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
         # BOOTING UP THE BODIES.
         #_______________________________________________________
-        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"]/10, make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
+        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
         MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
         CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.gray(0.5), make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
         # BOOTING UP THE LABELS.

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 G=6.67408e-11
 
 #Units are in kg, meters, coverted to seconds and then, (m^3/s^2)
@@ -31,10 +32,4 @@ Data = {'Body':[
 Data = pd.DataFrame(Data)
 
 df=pd.DataFrame(C)
-
-#Data.iloc[[1,2]]
-
-# Data = pd.DataFrame({"Name": ["Sun", 'Mercury'],"Mass":[198,.33]}
-# Cdfmercury = Cdf.loc['Name'=='Mercury']
-#print(df.iloc[[1,2]])
 

@@ -74,7 +74,7 @@ def Create_Earth_Moon_System(N):
     Moon_State_Vector=np.ndarray.tolist(np.hstack([Moon_Position1,Moon_Velocity]))
     print(Moon_State_Vector)
     Moon_Keplerian, e_vec_Moon = Inert_Kep(Moon_State_Vector, C.C["Earth"]["Mu"])
-    Craft1_State_Vector=Kep_Inert(38000e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/2,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
+    Craft1_State_Vector=Kep_Inert(150e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/2,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
     state = np.array([[0, 0, 0, 0, 0, 0],Moon_State_Vector,Craft1_State_Vector])
     return state, mass, soft
 
@@ -94,7 +94,7 @@ def Create_The_Jovian_System(N):
     state = np.array([[1*AU, 1.2*AU, .02*AU, -1e3, -.3e3, -.02e3], [-.01*AU, .09*AU, -.03*AU, 2e3, .5e3, .02e3],[-15*AU, 1*AU, .2*AU, -.8e3, .4e3, -.02e3],[-550*AU,0,0,0.005e3,4e3,.1e3]])/State_Norm  # if you activate this it'll let you have the first body be any particular value you want.
     return state, mass, soft
 
-#Your Scenario Functions#_______________________________________________________________________________________________
+#Propegation Functions#_______________________________________________________________________________________________
 
 def Get_Accel(N,state,mass,soft):
     accel=np.zeros((N,3))
@@ -105,11 +105,46 @@ def Get_Accel(N,state,mass,soft):
                 dx=state[i,0]-state[j,0]
                 dy=state[i,1]-state[j,1]
                 dz=state[i,2]-state[j,2]
-                Dist=np.array([dx,dy,dz])
-                Dist_Mag=np.sqrt((dx**2+dy**2+dz**2+soft**2))
+                dist=np.array([dx,dy,dz])
+                dist_mag=np.sqrt((dx**2+dy**2+dz**2+soft**2))
                 ##Calculates the acceleration induced on any particular pair of bodies
-                accel[i,:]-=G*mass[0,j]*np.array([(Dist[0])/(Dist_Mag**3),(Dist[1])/(Dist_Mag**3),(Dist[2])/(Dist_Mag**3)])
+                accel[i,:]-=G*mass[0,j]*np.array([(dist[0])/(dist_mag**3),(dist[1])/(dist_mag**3),(dist[2])/(dist_mag**3)])
+
     return accel
+
+def Update_DT(n,state):
+    relative_dist_state = []
+    for i in range(n):
+        for j in range(n):
+            if i != j:
+                # Calculates the distance of a particular mass to another in each dimension.
+                dx = state[i, 0] - state[j, 0]
+                dy = state[i, 1] - state[j, 1]
+                dz = state[i, 2] - state[j, 2]
+                dist = np.array([dx, dy, dz])
+                dist_mag_no_soft = np.linalg.norm(dist)
+                # Adds that distance into the Relative Dist State array
+                relative_dist_state.append(dist_mag_no_soft)
+    # Base altitude (m) [h_0]
+    dist_list = [150e3,300e3,600e3,1200e3,10e6,30e6,70e6,150e6,300e6,500e6,750e6,1.5e9]
+    dt_list= [10   ,25   ,50   ,120   ,170 ,220 ,320 ,420  ,550  ,680  ,800  ,2500]
+    z=np.min(relative_dist_state)-C.C["Earth"]["Radius"]
+    # error check
+    if z > dist_list[len(dist_list)-1]:
+        z = dist_list[len(dist_list)-1]
+    elif z < dist_list[0]:
+        z = dist_list[0]
+    ii = 0
+    for jj in range(0, int(len(dist_list))):
+        if dist_list[jj] <= z < dist_list[jj + 1]:
+            ii = jj
+
+    if z >= dist_list[len(dist_list)-1]:
+        ii = int(dist_list[len(dist_list)-1])
+    dt=dt_list[int(ii)]
+    print(dt)
+
+    return dt
 
 def Update_State(n,state,accel,dt,mass,soft,flag):
 
