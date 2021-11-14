@@ -74,7 +74,7 @@ def Create_Earth_Moon_System(N):
     Moon_State_Vector=np.ndarray.tolist(np.hstack([Moon_Position1,Moon_Velocity]))
     print(Moon_State_Vector)
     Moon_Keplerian, e_vec_Moon = Inert_Kep(Moon_State_Vector, C.C["Earth"]["Mu"])
-    Craft1_State_Vector=Kep_Inert(150e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/2,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
+    Craft1_State_Vector=Kep_Inert(25000e3+6378e3,0.0001,(Moon_Keplerian[2]),(Moon_Keplerian[3]),(Moon_Keplerian[4]),np.pi/2,C.C["Earth"]["Mu"]) #[a,e,i,w,ran,f,M,E]
     state = np.array([[0, 0, 0, 0, 0, 0],Moon_State_Vector,Craft1_State_Vector])
     return state, mass, soft
 
@@ -126,8 +126,10 @@ def Update_DT(n,state):
                 # Adds that distance into the Relative Dist State array
                 relative_dist_state.append(dist_mag_no_soft)
     # Base altitude (m) [h_0]
-    dist_list = [150e3,300e3,600e3,1200e3,10e6,30e6,70e6,150e6,300e6,500e6,750e6,1.5e9]
-    dt_list= [10   ,25   ,50   ,120   ,170 ,220 ,320 ,420  ,550  ,680  ,800  ,2500]
+    dist_list = [150e3,300e3,600e3,1200e3,5e6,15e6,50e6,120e6,280e6,500e6,750e6,1.5e9]
+    #dt_list= [10   ,15   ,25   ,30   ,35 ,40 ,45 ,420  ,550  ,680  ,800  ,2500]
+    dt_list = [20, 30, 40, 50, 60, 75, 95, 120, 180, 250,350,550]
+    #dt_list= [10   ,25   ,50   ,120   ,170 ,220 ,320 ,420  ,550  ,680  ,800  ,2500]
     z=np.min(relative_dist_state)-C.C["Earth"]["Radius"]
     # error check
     if z > dist_list[len(dist_list)-1]:
@@ -142,7 +144,7 @@ def Update_DT(n,state):
     if z >= dist_list[len(dist_list)-1]:
         ii = int(dist_list[len(dist_list)-1])
     dt=dt_list[int(ii)]
-    print(dt)
+    #print(dt)
 
     return dt
 
@@ -154,10 +156,10 @@ def Update_State(n,state,accel,dt,mass,soft,flag):
     if flag[0]==0:
         for i in range(n):
             accel = Get_Accel(n, state, mass, soft)
-            state[i, 3:] = state[i, 3:] + ((dt)*accel[i,:]) #Updating the velocity based on the acceleration
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:]) #Updating the velocity based on the acceleration
             state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
-            # accel        = Get_Accel(n,state,mass,soft)
-            # state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
+            accel        = Get_Accel(n,state,mass,soft)
+            state[i, 3:] = state[i, 3:] + ((dt/2)*accel[i,:])  # Updating the velocity based on the acceleration
     elif flag[0]==1:
         relative_state         = state[target_body,:]-state[origin_body,:]
         r_mag                  = np.linalg.norm(relative_state[:3])
@@ -171,10 +173,10 @@ def Update_State(n,state,accel,dt,mass,soft,flag):
 
         for i in range(n):
             accel = Get_Accel(n, state, mass, soft)
-            state[i, 3:] = state[i, 3:] + ((dt) * accel[i, :])  # Updating the velocity based on the acceleration
+            state[i, 3:] = state[i, 3:] + ((dt/2) * accel[i, :])  # Updating the velocity based on the acceleration
             state[i, :3] = state[i, :3] + (dt) * state[i, 3:]  # Updating the position based on the velo
-            # accel = Get_Accel(n, state, mass, soft)
-            # state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
+            accel = Get_Accel(n, state, mass, soft)
+            state[i, 3:] = state[i, 3:] + ((dt / 2) * accel[i, :])  # Updating the velocity based on the acceleration
     return state
 
 def Total_Energy(n, state, mass, index):
@@ -516,7 +518,7 @@ def Parent_Body_Check(State_Store_wrt_Body1,State_Store_wrt_Body2,t,ROI_List): #
         mag_1=np.linalg.norm(State_Store_wrt_Body2[2,:3, i])
         if mag_0<ROI_List[0] and mag_1>ROI_List[1]:
             Orbit_Flag_Store[i,0]=1
-        elif mag_0<ROI_List[0] and mag_1<ROI_List[1]:
+        elif mag_1<ROI_List[1]:
             Orbit_Flag_Store[i,0]=2
         else:
             Orbit_Flag_Store[i,:] = 0

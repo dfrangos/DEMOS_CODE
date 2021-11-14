@@ -369,34 +369,48 @@ while True:
             t         = int(lines[4])
             DT        = float(lines[5])
         File.close()
-        t = 1200  # How many iterations
-        DT = 10   # Your delta T jumps
+        t = 12000  # How many iterations
+        DT = 70   # Your delta T jumps
         N = 3 #Number of Bodies
         ROI_Moon = GET_SOI(C.C["Earth"]["Mass"], C.C["Moon"]["Mass"], 384399e3)
-        ROI_Earth= GET_SOI(C.C["Sun"]["Mass"], C.C["Earth"]["Mass"], 149.60e9)
+        ROI_Earth= 384399e3-ROI_Moon
         ROI_List=np.array([ROI_Earth,ROI_Moon])
 
         # Defining my storage area for my position values
         State, Mass, Soft = Create_Earth_Moon_System(N)
         State_Store = np.zeros((N, 6, t))
         Accel = Get_Accel(N, State, Mass, Soft)
-        Burn_Index=120
-        Burn_Index_2=220
-        Burn_Index_3 = 2990
+        Burn_Index   =369
+        Burn_Index_2 =4696
+        Burn_Index_3 = 5795
+        Burn_Index_4 = 6356
+        Burn_Index_5 = 6400
+        Burn_Index_6 = 6356
+        Burn_Index_7 = 6400
+        Rmag=np.zeros((t,1))
         for k in range(t):
             DT = Update_DT(N,State)
             #Structure for flag: burn_flag, target_body, dv_mag, origin_body, normal_direction,velocity_direction
             if k==Burn_Index:
-                Flag=[1,2,2808.5,0,0,1]
+                Flag=[1,2,1275.5,0,0,1]
             elif k==Burn_Index_2:
-                Flag=[0,2,1500,1,0,1]
+                Flag=[1,2,650,1,0,-1]
             elif k==Burn_Index_3:
-                Flag=[0,2,230,1,0,-1]
+                Flag=[1,2,425,1,0,-1]
+            elif k==Burn_Index_4:
+                Flag=[1,2,750,1,0,-1]
+            elif k==Burn_Index_5:
+                Flag=[1,2,300,1,0,-1]
+            elif k==Burn_Index_6:
+                Flag=[0,2,250,1,0,-1]
+            elif k==Burn_Index_7:
+                Flag=[0,2,400,1,0,-1]
             else:
                 Flag=[0,0,0,0,0,0]
             State = Update_State(N, State, Accel, DT, Mass, Soft,Flag)
             State_Store[:, :, k] = State[:, 0:]
-            # Saving the State Store Information to a File
+            Rmag[k]=np.linalg.norm(State[2,:3]-State[0,:3])
+        # Saving the State Store Information to a File
         while Save_to_File == "On":
             write_to_file = True
             filename = 'n_body_dat_' + str(N) + Scenario_Type + '.npy'
@@ -456,21 +470,25 @@ while True:
         ax2.set_ylabel("Transfer Duration Days",color='tab:red')
         ax2.tick_params(axis='y',labelcolor='tab:red')
         ax2.plot(x, T_Store,"r")
-
+        #
         ax_sub=ax2.twinx()
         ax_sub.set_ylabel("Delta V Req (m/s)",color='tab:blue')
         ax_sub.tick_params(axis='y', labelcolor='tab:blue')
         ax_sub.plot(x,DV_1,'b')
-
+        #
         ax_sub3 = ax2.twinx()
         ax_sub3.set_ylabel("Angle difference")
         ax_sub3.plot(x,Angle_Diff, "k")
-
         ax2.grid(axis='x')
         ax2.grid(axis='y')
         ax2.legend(["Transfer Times", "DV Req to Circularize", "Phase Timing"])
-        #ax_sub.legend(["DV Req to Circularize"])
+        # #ax_sub.legend(["DV Req to Circularize"])
         fig2.tight_layout()
+
+        # fig3, ax3 = plt.subplots()
+        # ax3.set_title("dist")
+        # ax3.plot(x,Rmag,'b')
+
         plt.show()
         # _________________________________________
 
@@ -509,10 +527,11 @@ while True:
                 scene.camera.follow(CRAFT1)
                 valnum = 2
             if val == "Home":
-                scene.camera.center=vector(0,0,0)
+                valnum = 3
                 #scene.camera.follow(None)
+                scene.camera.pos=vector(0,0,0)
 
-        labels = ["Earth", "Moon", "Craft1"]
+        labels = ["Earth", "Moon", "Craft1","Home"]
         menu(choices=['Choose an object', 'Earth', 'Moon', 'Craft1','Home'], bind=Target_Menu, right=30, pos=scene.title_anchor)
 
         # This function creates the menu that will be used to select the parent body .
@@ -565,11 +584,29 @@ while True:
                         VY: {:.2f} m/s           VY: {:.2f} m/s
                         VZ: {:.2f} m/s           VZ: {:.2f} m/s
                         VMag: {:.2f} m/s         VMag: {:.2f} m/s'''
+
+        #CREATING THE AXES AND THEIR LABELS
+        # xaxis = arrow(pos=vector(0,0,0),axis=vector(30e6,0,0), shaftwidth=1000e3,color=color.red)
+        # yaxis = arrow(pos=vector(0, 0, 0), axis=vector(0, 30e6, 0), shaftwidth=1000e3, color=color.green)
+        # zaxis = arrow(pos=vector(0, 0, 0), axis=vector(0, 0, 30e6), shaftwidth=1000e3, color=color.blue)
+        # xaxislabel = label(pos=vector(30e6,0,0), text='xaxis',
+        #                xoffset=10, height=10, color=color.red)
+        # yaxislabel = label(pos=vector(0, 30e6, 0), text='yaxis',
+        #                xoffset=10, height=10, color=color.green)
+        # zaxislabel = label(pos=vector(0, 0, 30e6), text='zaxis',
+        #                 xoffset=10, height=10, color=color.blue)
+        #CREATING THE SKY BOX
+       #  skydimension = 3000e6
+       #  WALL1 = box(pos=vector(0,0,skydimension/2),
+       # length=skydimension, height=skydimension, width=2,texture={'file': "\Images\Earth.jpg"})
+       #  WALL2 = box(pos=vector(0,0,-skydimension/2),
+       #              length=skydimension, height=skydimension, width=2, texture={'file': "\Images\Earth.jpg"})
+
         # BOOTING UP THE BODIES.
         #_______________________________________________________
-        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.1, texture={'file': "\Images\Earth.jpg"})
-        MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.1, texture={'file': "\Images\Moon.jpg"})
-        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.gray(0.5), make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.1)
+        EARTH        = sphere(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]),radius=C.C["Earth"]["Radius"],emissive=False, make_trail=True, trail_type='curve', interval=30, retain=600,shininess=.23, texture={'file': "\Images\Earth.jpg"})
+        MOON         = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]),radius=C.C["Moon"]["Radius"], make_trail=True, trail_type='curve', interval=30, retain=1400,shininess=0.05, texture={'file': "\Images\Moon.jpg"})
+        CRAFT1       = sphere(pos=vector(State_Store[2, 0, 0], State_Store[2, 1, 0], State_Store[2, 2, 0]), radius=C.C["Craft1"]["Radius"], color=color.gray(0.5), make_trail=True,    trail_type='curve', interval=1, retain=600, shininess=0.2)
         # BOOTING UP THE LABELS.
         #______________________________________________________
         Elabel       = label(pos=vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0]), text='Earth',  xoffset=10, height=10, color=color.blue)
@@ -580,34 +617,39 @@ while True:
         CRAFT1_Rel_Orb             = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=(Craft1_T_Ex/DT)+1)
         CRAFT1_Rel_Orb.origin      = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
 
-        CRAFT1_Rel_Orb_Moon        = curve(vector(State_Store_wrt_Body2[2, 0, 0], State_Store_wrt_Body2[2, 1, 0], State_Store_wrt_Body2[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Rel_Orb_Moon        = curve(retain=300)
         CRAFT1_Rel_Orb_Moon.origin = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
         # BOOTING UP THE HYPERBOLIC ORBITS.
         # ______________________________________________________
-        CRAFT1_Ec_Orb_Earth        = curve(vector(State_Store_wrt_Body1[2, 0, 0], State_Store_wrt_Body1[2, 1, 0], State_Store_wrt_Body1[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Ec_Orb_Earth        = curve(retain=300)
         CRAFT1_Ec_Orb_Earth.orign  = vector(State_Store[0, 0, 0], State_Store[0, 1, 0], State_Store[0, 2, 0])
 
-        CRAFT1_Ec_Orb_Moon         = curve(vector(State_Store_wrt_Body2[2, 0, 0], State_Store_wrt_Body2[2, 1, 0], State_Store_wrt_Body2[2, 2, 0]),radius=200e3, retain=300)
+        #CRAFT1_Ec_Orb_Moon         = curve(vector(State_Store_wrt_Body2[2, 0, 0], State_Store_wrt_Body2[2, 1, 0], State_Store_wrt_Body2[2, 2, 0]),radius=200e3, retain=300)
+        CRAFT1_Ec_Orb_Moon = curve(retain=300)
         CRAFT1_Ec_Orb_Moon.orign   = vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0])
 
         #BOOTING UP THE SPHERES OF INFLUENCE
         # ______________________________________________________
         ROI_MOON = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Moon, color=color.white,opacity=.07)
-
+        #ROI_Earth = sphere(pos=vector(State_Store[1, 0, 0], State_Store[1, 1, 0], State_Store[1, 2, 0]), radius=ROI_Earth,color=color.white, opacity=.07)
         #SETTING UP THE INITIAL CAMERA CONDITIONS
         k=0
-        scene.forward    = vector(0,0,1)
-        scene.up         = vector(1,0,0)
+        scene.forward    = vector(1,0,0)
+        scene.up         = vector(0,0,1)
         scale            = 1e-10 / 1e2
         scene.range      = 1000000
         scene.fov        = .0001
         scene.autoscale  = False
-        scene.width = 1400
-        scene.height = 700
+        scene.width = 1700
+        scene.height = 650
+        scene.lights = []
+        SUN=distant_light(direction=vector(0, 1.496e+8, 0), color=color.white)
+
 
         #BEGINING THE ANIMATION
         while k < t:
             if running:
+
                 Craft1_Orb_Elements_In, Craft1_e_Vec_In = Inert_Kep(State_Store_wrt_Body1[2, :, k], C.C["Earth"]["Mu"])
                 Craft1_Major_Axis_In = float(Craft1_Orb_Elements_In[0])
                 Craft1_T_In = Get_Period(Craft1_Major_Axis_In, C.C["Earth"]["Mass"])
@@ -647,8 +689,24 @@ while True:
                 Mlabel.pos   = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 C1label.pos  = vector(State_Store[2, 0, k], State_Store[2, 1, k], State_Store[2, 2, k])
                 # PROPAGATING THE STABLE ORBITS.
+                #Structure of the Orbit_Flag_Store
+                # First Column 0: The Craft has escaped every body in the system
+                # First Column 1: The Craft is within the SOI of the first body
+                # First Column 2: The Craft is within the SOI of the second body.
+                # Second Column 0: The Craft does not have an orbit around anything.
+                # Second COlumn 1: The Craft has a closed-stable Orbit.
+                # Second Column 2: The craft has an eccentric orbit.
                 # _______________________________________________________
+                #You'll enter this block of code if the crafts parent body is the Earth(1) and its in a stable(1) orbit.
                 if Orbit_Flag_Store[k,0]==1 and Orbit_Flag_Store[k,1]==1:
+                    #You'll enter this if the value of k is greater than 1
+                    if k>0:
+                        #You'll enter this block if the crafts previous orbit was anything other than stable.
+                        if Orbit_Flag_Store[k-1,1]==0 or Orbit_Flag_Store[k-1,1]==2:
+                            CRAFT1_Ec_Orb_Earth.clear()
+                            CRAFT1_Rel_Orb_Moon.clear()
+                            CRAFT1_Rel_Orb.clear()
+                            CRAFT1_Ec_Orb_Moon.clear()
                     #This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
                     if Craft1_Major_Axis_In>=Craft1_Major_Axis_Ex*1.015 or Craft1_Major_Axis_In<=Craft1_Major_Axis_Ex*0.985:
                         Craft1_Major_Axis_Ex=Craft1_Major_Axis_In
@@ -656,35 +714,59 @@ while True:
                     CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k],
                                                      State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
                     CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                # You'll enter this block of code if the crafts parent body is the Moon(2) and its in a stable(1) orbit.
                 if Orbit_Flag_Store[k,0]==2 and Orbit_Flag_Store[k,1]==1:
+                    # You'll enter this if the value of k is greater than 1
+                    if k > 0:
+                        # You'll enter this block if the crafts previous orbit was anything other than stable.
+                        if Orbit_Flag_Store[k - 1, 1] == 0 or Orbit_Flag_Store[k - 1, 1] == 2:
+                            CRAFT1_Ec_Orb_Earth.clear()
+                            CRAFT1_Rel_Orb_Moon.clear()
+                            CRAFT1_Rel_Orb.clear()
+                            CRAFT1_Ec_Orb_Moon.clear()
                     # This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
                     #Its not here yet, havent wokre that out.
                     CRAFT1_Rel_Orb_Moon.append(pos=vector(State_Store_wrt_Body2[2, 0, k], State_Store_wrt_Body2[2, 1, k],
-                                                     State_Store_wrt_Body2[2, 2, k]), radius=200e3, color=color.red)
+                                                     State_Store_wrt_Body2[2, 2, k]), radius=1000, color=color.red)
                     CRAFT1_Rel_Orb_Moon.origin = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
                 # PROPAGATING THE HYPERBOLIC ORBITS.
                 # _______________________________________________________
+                # You'll enter this block of code if the crafts parent body is the Earth(1) and its in a hyperbolic(2) orbit.
                 if Orbit_Flag_Store[k,0]==1 and Orbit_Flag_Store[k,1]==2:
+                    # You'll enter this if the value of k is greater than 1
+                    if k > 0:
+                        # You'll enter this block if the crafts previous orbit was anything other than hyperbolic.
+                        if Orbit_Flag_Store[k - 1, 1]!=2:
+                            print("Entered 1,2 previous, anything else")
+                            CRAFT1_Ec_Orb_Earth.clear()
+                            CRAFT1_Rel_Orb_Moon.clear()
+                            CRAFT1_Rel_Orb.clear()
+                            CRAFT1_Ec_Orb_Moon.clear()
                     #This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
                     # Its not here yet, havent wokre that out.
                     CRAFT1_Ec_Orb_Earth.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k], State_Store_wrt_Body1[2, 2, k]),radius=200e3, color=color.red)
                     CRAFT1_Ec_Orb_Earth.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
+                # You'll enter this block of code if the crafts parent body is the Moon(2) and its in a hyperbolic(2) orbit.
                 if Orbit_Flag_Store[k,0]==2 and Orbit_Flag_Store[k,1]==2:
+                    # You'll enter this if the value of k is greater than 1
+                    if k > 0:
+                        # You'll enter this block if the crafts previous orbit was anything other than hyperbolic.
+                        if Orbit_Flag_Store[k - 1, 1] != 2:
+                            print("Entered 2,2 previous 1,1")
+                            CRAFT1_Rel_Orb_Moon.clear()
+                            CRAFT1_Rel_Orb.clear()
+                            CRAFT1_Ec_Orb_Earth.clear()
                     # This if statment simply checks to see if a delta V has occured and then updates the retain value of the orbit.
                     #Its not here yet, havent wokre that out.
+
                     CRAFT1_Ec_Orb_Moon.append(pos=vector(State_Store_wrt_Body2[2, 0, k], State_Store_wrt_Body2[2, 1, k],
-                                                     State_Store_wrt_Body2[2, 2, k]), radius=200e3, color=color.red)
+                                                     State_Store_wrt_Body2[2, 2, k]), radius=100e3, color=color.red)
                     CRAFT1_Ec_Orb_Moon.origin = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
+                #You'll enter this if the craft is beyond every SOI
                 if Orbit_Flag_Store[k,0]==0:
                     CRAFT1_Rel_Orb.append(pos=vector(State_Store_wrt_Body1[2, 0, k], State_Store_wrt_Body1[2, 1, k],
                                                      State_Store_wrt_Body1[2, 2, k]), radius=200e3, color=color.red)
                     CRAFT1_Rel_Orb.origin = vector(State_Store[0, 0, k], State_Store[0, 1, k], State_Store[0, 2, k])
-
-
-
-
-
-
 
 
                 # PROPAGATING THE SPHERES OF INFLUENCE.
@@ -692,7 +774,7 @@ while True:
                 ROI_MOON.pos = vector(State_Store[1, 0, k], State_Store[1, 1, k], State_Store[1, 2, k])
 
                 #Creating the text at the bottom.
-                if Parent_Num==0:
+                if Parent_Num==0 and valnum!=3:
                     scene.caption=(str_format.format(k,labels[valnum],
                                                        State_Store[valnum, 0, k],State_Store_wrt_Body1[valnum, 0, k],
                                                        State_Store[valnum, 1, k],State_Store_wrt_Body1[valnum, 1, k],
@@ -702,7 +784,7 @@ while True:
                                                        State_Store[valnum, 4, k],State_Store_wrt_Body1[valnum, 4, k],
                                                        State_Store[valnum, 5, k],State_Store_wrt_Body1[valnum, 5, k],
                                                        np.linalg.norm(State_Store[valnum,3:, k]), np.linalg.norm(State_Store_wrt_Body1[valnum,3:, k])))
-                elif Parent_Num==1:
+                elif Parent_Num==1 and valnum!=3:
                     scene.caption = (str_format.format(k, labels[valnum],
                                                        State_Store[valnum, 0, k], State_Store_wrt_Body2[valnum, 0, k],
                                                        State_Store[valnum, 1, k], State_Store_wrt_Body2[valnum, 1, k],
@@ -714,7 +796,7 @@ while True:
                                                        State_Store[valnum, 5, k], State_Store_wrt_Body2[valnum, 5, k],
                                                        np.linalg.norm(State_Store[valnum, 3:, k]),
                                                        np.linalg.norm(State_Store_wrt_Body2[valnum, 3:, k])))
-                elif Parent_Num == 2:
+                elif Parent_Num == 2 and valnum!=3:
                     scene.caption = (str_format.format(k, labels[valnum],
                                                        State_Store[valnum, 0, k], State_Store_wrt_Body3[valnum, 0, k],
                                                        State_Store[valnum, 1, k], State_Store_wrt_Body3[valnum, 1, k],
@@ -726,6 +808,18 @@ while True:
                                                        State_Store[valnum, 5, k], State_Store_wrt_Body3[valnum, 5, k],
                                                        np.linalg.norm(State_Store[valnum, 3:, k]),
                                                        np.linalg.norm(State_Store_wrt_Body3[valnum, 3:, k])))
+                elif valnum==3:
+                    scene.caption = (str_format.format(k, labels[valnum],
+                                                       0, 0,
+                                                       0, 0,
+                                                       0, 0,
+                                                       0,
+                                                       0,
+                                                       0, 0,
+                                                       0, 0,
+                                                       0, 0,
+                                                       0,
+                                                       0))
                 k +=1
                 if k==t-1:
                     k=0
